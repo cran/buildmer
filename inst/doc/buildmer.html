@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Introduction</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: #990073
+   }
+
+   pre .number {
+     color: #099;
+   }
+
+   pre .comment {
+     color: #998;
+     font-style: italic
+   }
+
+   pre .keyword {
+     color: #900;
+     font-weight: bold
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: #d14;
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+<!-- MathJax scripts -->
+<script type="text/javascript" src="https://cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML">
+</script>
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h1>Introduction</h1>
+
+<p>@keepitmaximal suggest that for valid statistical inference, a regression model must control for all possible confounding factors, specifically those coming from random effects such as subjects and items. @parsimonious suggest that this proposed strategy leads to overfitting and that an appropriately-parsimonious model must be chosen, preferably based on theory but possibly also using stepwise elimination [@stepwise]. Both strategies require a maximal model to be identified (for @keepitmaximal, this is the final model; for @stepwise, this is the basis for backward stepwise elimination), but for many psycholinguistic experiments, the <em>truly</em> maximal model will fail to converge and a reasonable subset model needs to be chosen.</p>
+
+<p>The <code>buildmer</code> package aims to automate the procedures identifying the maximal model that can still converge &amp; performing backward stepwise elimination based on a variety of criteria (change in log-likelihood, AIC, BIC). The package does not contain any model-fitting code, but functions as an administrative loop around other packages by simply building up a maximal formula object and passing it along. Currently, the package supports models that can be fitted by <code>(g)lm</code>, <code>(g)lmer</code> (package <code>lme4</code>), <code>gls</code>, <code>lme</code> (package <code>nlme</code>), <code>gam</code>, <code>bam</code> (package <code>mgcv</code>), <code>gamm4</code> (package <code>gamm4</code>), <code>glmmTMB</code> (package <code>glmmTMB</code>), <code>multinom</code> (package <code>nnet</code>), and it can use <code>JuliaCall</code> to drive Douglas Bates&#39;s <code>MixedModels</code> package for Julia.</p>
+
+<h1>A vowel study</h1>
+
+<p>To illustrate what <code>buildmer</code> can do for you, the package comes with a particularly pathological dataset called <code>vowels</code>. It looks like this:</p>
+
+<pre><code class="r">library(buildmer)
+head(vowels)
+</code></pre>
+
+<pre><code>##   participant   word vowel neighborhood  timepoint       f1       f2
+## 1           1 Keulen   oey      36.1961 0.05118788 407.8202 1838.611
+## 2           1 Keulen   oey      36.1961 0.11941466 416.2701 1635.436
+## 3           1 Keulen   oey      36.1961 0.18764143 450.6488 1654.561
+## 4           1 Keulen   oey      36.1961 0.25586821 449.7890 1645.075
+## 5           1 Keulen   oey      36.1961 0.32409498 444.6863 1606.261
+## 6           1 Keulen   oey      36.1961 0.39232176 438.5311 1607.581
+##   following information stress
+## 1      lOns    4.511475   TRUE
+## 2      lOns    4.511475   TRUE
+## 3      lOns    4.511475   TRUE
+## 4      lOns    4.511475   TRUE
+## 5      lOns    4.511475   TRUE
+## 6      lOns    4.511475   TRUE
+</code></pre>
+
+<p>This is a pilot study that I conducted when I was just starting my PhD, and attempted to analyze in probably the worst way possible. The research question was whether vowel diphthongization in the Dutch vowels /\textipa{e:,\o:,o:,Ei,\oe y}/ was affected by syllable structure, such that an /l/ within the same syllable would block diphthongization but an /l/ in the onset of the next syllable would permit it. In plain English, the question was whether these five vowels in Dutch were pronounced like the vowel in English &#39;fear&#39;, with the tongue held constant for the duration of the vowel, or like the vowel in English &#39;fade&#39;, which has an upward tongue movement towards the position of the vowel in English &#39;fit&#39;. The position of the tongue can be measured in a simple word-list reading experiment by measuring the speech signal&#39;s so-called &#39;first formant&#39;, labeled <code>f1</code> in this dataset, where lower F1 = higher tongue. Thus, the research question is if the F1 either changes or remains stable for the duration of each vowel depending on whether the following consonant is an &#39;l&#39; in the same syllable (coded as <code>lCda</code> in column <code>following</code>) or in the next syllable (coded as <code>lOns</code>). Additionally, I wanted to control for the factors <code>neighborhood</code> (a measure of entropy: &#39;if only one sound is changed anywhere in this word, how many new words could be generated?&#39;), <code>information</code> (another measure of entropy derived from the famous Shannon information measure), and <code>stress</code> (a dummy encoding whether the vowel was stressed or unstressed).</p>
+
+<p>An entirely reasonable way to analyze these data, and the approach I ultimately pursued later in my PhD, would be to take samples from each vowel at 75\% realization and at 25\% realization, subtract these two, and use this &#39;delta score&#39; as dependent variable: if this score is non-zero, the vowel changes over time, if it is approximately zero, the vowel was stable. In this dataset, however, I instead took as many samples as were present in the part of the wave file corresponding to these vowels, and wanted to fit a linear regression line through all of these samples as a function of the sample number. This number, scaled from 0 to 1 per token, is listed in column <code>timepoint</code>. To make the model even more challenging to fit, only six participants were tested in this pilot study, making it very difficult to find an optimum when including a full random-slope structure.</p>
+
+<p>In <code>lme4</code> syntax, the fully maximal model would be given by the following formula:</p>
+
+<pre><code class="r">f &lt;- f1 ~ vowel*timepoint*following * neighborhood*information*stress + 
+     (vowel*timepoint*following * neighborhood+information+stress | participant) +
+     (timepoint | word)
+</code></pre>
+
+<p>It should go without saying that this is a completely unreasonable model that will never converge. A first step towards reducing the model structure could be to reason that effects of neighborhood, information, and stress, which are all properties of the individual words in this data set, could be subsumed into the random effects by words. This reduces the maximal model to:</p>
+
+<pre><code class="r">f &lt;- f1 ~ vowel*timepoint*following +
+     (vowel*timepoint*following | participant) +
+     (timepoint | word)
+</code></pre>
+
+<p>This model is still somewhat on the large side, so we will now use <code>buildmer</code> to check:</p>
+
+<ul>
+<li>if this model is capable of converging at all;</li>
+<li>if all of these terms are really necessary.</li>
+</ul>
+
+<h1>Finding the maximal <em>feasible</em> model &amp; doing stepwise elimination from it</h1>
+
+<p>To illustrate <code>buildmer</code>&#39;s modular capabilities, we&#39;ll fit this model in two steps. We start by identifying the maximal model that is still capable of converging. We do this by running <code>buildmer</code>, with the <code>direction</code> argument set to <code>&#39;order&#39;</code>. We also set <code>lme4</code>s optimizer to <code>bobyqa</code>, as this manages to get much further than the default <code>nloptwrap</code>.</p>
+
+<p>&ldquo;{r,eval=F},
+library(lme4)
+m &lt;- buildmer(f,data=vowels,direction=&#39;order&#39;,control=lmerControl(optimizer=&#39;bobyqa&#39;))</p>
+
+<pre><code>
+The `order` step is useful if the maximal model includes random effects: `buildmer` will start out with an empty model and keeps adding terms to this model until convergence can no longer be achieved. The `order` step adds terms in order of their contribution to a certain elimination criterion, such that the most important random slopes will be included first. The default elimination criterion is the change in log-likelihood (terms which provide higher likelihoods are considered more important), but AIC and BIC are also supported, by passing `crit=&#39;AIC&#39;` or `crit=&#39;BIC&#39;`. The default `direction` is `c(&#39;order&#39;,&#39;backward&#39;)`, i.e.\ proceeding directly to backward stepwise elimination, but for illustration purposes we separate those steps here. After a lot of model fits (of which the output is not shown here), the model converges onto the following maximal model:
+
+
+
+```r
+(f &lt;- formula(m@model))
+</code></pre>
+
+<pre><code>## f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + 
+##     following:vowel + following:vowel:timepoint + (1 + timepoint | 
+##     word) + (1 + timepoint + following + timepoint:following | 
+##     participant)
+## &lt;environment: 0x55cde749f050&gt;
+</code></pre>
+
+<p>The maximal <em>feasible</em> model, i.e.\ the maximal model that is actually capable of converging, is one excluding random slopes for vowels by participants. This is not optimal for inference purposes, but for now it will do; we will see below that taking out the correlation parameters in the random effects makes it possible to include random slopes for vowels as well.
+We now proceed to the next step: stepwise elimination. This could also be done using e.g.\ <code>lmerTest</code>, but since the machinery was needed for <code>direction=&#39;order&#39;</code> anyway it came at very little cost to also implement stepwise elimination in <code>buildmer</code> (both forward and backward are supported). This used the same elimination criterion as could be specified previously; if left unspecified, it defaults to <code>crit=&#39;LRT&#39;</code>, for the likelihood-ratio test. This is the preferred test for mixed models in @stepwise.</p>
+
+<pre><code class="r">m &lt;- buildmer(f,data=vowels,direction=&#39;backward&#39;,control=lmerControl(optimizer=&#39;bobyqa&#39;))
+</code></pre>
+
+<p>To keep this vignette short, the output of this command is not shown, but the final model after stepwise elimination is:</p>
+
+<pre><code class="r">(f &lt;- formula(m@model))
+</code></pre>
+
+<pre><code>## f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + 
+##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following | 
+##     participant)
+</code></pre>
+
+<p>By default, <code>buildmer</code> automatically calculates summary and ANOVA statistics based on Wald \(z\)-scores (summary) or Wald \(\chi^2\) tests (ANOVA). For answering our research question, we look at the summary:</p>
+
+<pre><code class="r">summary(m)
+</code></pre>
+
+<pre><code>## Linear mixed model fit by REML (p-values based on Wald z-scores) [lmerMod]
+## Formula: 
+## f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint +  
+##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following |  
+##     participant)
+##    Data: vowels
+## 
+## REML criterion at convergence: 149448.9
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -6.2346 -0.4169  0.0102  0.3876 21.6814 
+## 
+## Random effects:
+##  Groups      Name                    Variance Std.Dev. Corr             
+##  word        (Intercept)              2538.6   50.38                    
+##              timepoint               11082.8  105.27   -0.78            
+##  participant (Intercept)              2195.9   46.86                    
+##              timepoint                3409.8   58.39   -0.50            
+##              followinglOns             741.1   27.22    0.11  0.65      
+##              timepoint:followinglOns  3046.0   55.19    0.64 -0.88 -0.67
+##  Residual                            10018.2  100.09                    
+## Number of obs: 12351, groups:  word, 148; participant, 6
+## 
+## Fixed effects:
+##                         Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)              551.733     20.059  27.506  &lt; 2e-16 ***
+## followinglOns             49.106     14.468   3.394 0.000688 ***
+## vowel1                   114.253      8.950  12.766  &lt; 2e-16 ***
+## vowel2                   142.083      8.909  15.947  &lt; 2e-16 ***
+## vowel3                  -125.955      8.625 -14.603  &lt; 2e-16 ***
+## vowel4                   -79.211      9.969  -7.946 1.93e-15 ***
+## timepoint                -15.445     26.812  -0.576 0.564579    
+## vowel1:timepoint         -39.662     18.234  -2.175 0.029616 *  
+## vowel2:timepoint         -91.032     18.166  -5.011 5.42e-07 ***
+## vowel3:timepoint         105.886     17.550   6.033 1.61e-09 ***
+## vowel4:timepoint          38.923     20.266   1.921 0.054774 .  
+## followinglOns:timepoint -136.888     29.387  -4.658 3.19e-06 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) fllwnO vowel1 vowel2 vowel3 vowel4 timpnt vwl1:t vwl2:t
+## follwnglOns -0.045                                                        
+## vowel1      -0.014  0.020                                                 
+## vowel2      -0.017  0.025 -0.225                                          
+## vowel3      -0.029  0.031 -0.210 -0.207                                   
+## vowel4       0.034 -0.031 -0.278 -0.276 -0.266                            
+## timepoint   -0.535  0.595  0.017  0.020  0.034 -0.041                     
+## vowl1:tmpnt  0.011 -0.016 -0.787  0.177  0.165  0.218 -0.021              
+## vowl2:tmpnt  0.013 -0.020  0.177 -0.787  0.163  0.217 -0.025 -0.226       
+## vowl3:tmpnt  0.023 -0.024  0.166  0.164 -0.788  0.210 -0.044 -0.210 -0.208
+## vowl4:tmpnt -0.027  0.024  0.219  0.218  0.210 -0.788  0.051 -0.277 -0.276
+## fllwnglOns:  0.568 -0.720 -0.016 -0.020 -0.024  0.024 -0.788  0.020  0.024
+##             vwl3:t vwl4:t
+## follwnglOns              
+## vowel1                   
+## vowel2                   
+## vowel3                   
+## vowel4                   
+## timepoint                
+## vowl1:tmpnt              
+## vowl2:tmpnt              
+## vowl3:tmpnt              
+## vowl4:tmpnt -0.265       
+## fllwnglOns:  0.031 -0.030
+## convergence code: 0
+## Model failed to converge with max|grad| = 0.00780211 (tol = 0.002, component 1)
+</code></pre>
+
+<p>The highly-significant effect for <code>followinglOns:timepoint</code> shows that if the following /l/ is in the onset of the next syllable, there is a much larger change in F1 compared to the reference condition of having the following /l/ in the coda of the same syllable.</p>
+
+<h1>Diagonal random-effects covariances</h1>
+
+<p>One hidden feature that is present in <code>buildmer</code> but that has not yet been discussed is the ability to group terms together in blocks for ordering and stepwise-elimination purposes. This is not documented because it requires some knowledge of <code>buildmer</code> internals, but this vignette offers an opportunity to demonstrate how this can be done. While the first argument to <code>buildmer</code> functions is normally a formula, it is also possible to pass a data frame as generated by <code>tabulate.formula</code>:</p>
+
+<pre><code class="r">tabulate.formula(f)
+</code></pre>
+
+<pre><code>##    index    grouping                term
+## 1   &lt;NA&gt;        &lt;NA&gt;                   1
+## 2   &lt;NA&gt;        &lt;NA&gt;           following
+## 3   &lt;NA&gt;        &lt;NA&gt;               vowel
+## 4   &lt;NA&gt;        &lt;NA&gt;           timepoint
+## 5   &lt;NA&gt;        &lt;NA&gt;     vowel:timepoint
+## 6   &lt;NA&gt;        &lt;NA&gt; following:timepoint
+## 7    7 1        word                   1
+## 8    7 1        word           timepoint
+## 9    8 1 participant                   1
+## 10   8 1 participant           timepoint
+## 11   8 1 participant           following
+## 12   8 1 participant timepoint:following
+##                                   code block
+## 1                              NA NA 1     1
+## 2                      NA NA following     2
+## 3                          NA NA vowel     3
+## 4                      NA NA timepoint     4
+## 5                NA NA vowel:timepoint     5
+## 6            NA NA following:timepoint     6
+## 7                           7 1 word 1     7
+## 8                   7 1 word timepoint     8
+## 9                    8 1 participant 1     9
+## 10           8 1 participant timepoint    10
+## 11           8 1 participant following    11
+## 12 8 1 participant timepoint:following    12
+</code></pre>
+
+<p>This is an internal <code>buildmer</code> data structure, but it is rather self-explanatory in how it is used. It is possible to modify the <code>block</code> column to force terms to be evaluated as a single group, rather than separately, by giving these terms the same <code>block</code> value. These values are not used in any other way than this purpose of selecting terms to be grouped together; they therefore do not even have to be numerics.</p>
+
+<p>This data structure can be used to fit models with diagonal random-effects structures. The <code>buildmer()</code> function documentation provides an example, which we will follow here. The first step is to create explicit columns for the factor <code>vowel</code>; if this is not done, only random-effect correlations between vowels and <em>other</em> random slopes will be eliminated and those between the vowels themselves will remain.</p>
+
+<pre><code class="r">vowels &lt;- cbind(vowels,model.matrix(~vowel,vowels))
+</code></pre>
+
+<p>We next create a formula for this modified data set. To make it easier to type, we do not explicitly diagonalize the formula ourselves, but use <code>buildmer</code>&#39;s <code>diag()</code> method for <code>formula</code> objects. We then call <code>tabulate.formula()</code> on the new formula. Note that we <em>cannot</em> use the simple <code>vowel</code> factor in the fixed-effects part of the formula, as this will break <code>buildmer</code>&#39;s marginality checks when considering which terms are eligible for inclusion or removal.</p>
+
+<pre><code class="r">form &lt;- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following + 
+         ((vowel1+vowel2+vowel3+vowel4)*timepoint*following | participant) +
+         (timepoint | word))
+(terms &lt;- tabulate.formula(form))
+</code></pre>
+
+<pre><code>##    index    grouping                       term
+## 1   &lt;NA&gt;        &lt;NA&gt;                          1
+## 2   &lt;NA&gt;        &lt;NA&gt;                     vowel1
+## 3   &lt;NA&gt;        &lt;NA&gt;                     vowel2
+## 4   &lt;NA&gt;        &lt;NA&gt;                     vowel3
+## 5   &lt;NA&gt;        &lt;NA&gt;                     vowel4
+## 6   &lt;NA&gt;        &lt;NA&gt;                  timepoint
+## 7   &lt;NA&gt;        &lt;NA&gt;           vowel1:timepoint
+## 8   &lt;NA&gt;        &lt;NA&gt;           vowel2:timepoint
+## 9   &lt;NA&gt;        &lt;NA&gt;           vowel3:timepoint
+## 10  &lt;NA&gt;        &lt;NA&gt;           vowel4:timepoint
+## 11  &lt;NA&gt;        &lt;NA&gt;                  following
+## 12  &lt;NA&gt;        &lt;NA&gt;           vowel1:following
+## 13  &lt;NA&gt;        &lt;NA&gt;           vowel2:following
+## 14  &lt;NA&gt;        &lt;NA&gt;           vowel3:following
+## 15  &lt;NA&gt;        &lt;NA&gt;           vowel4:following
+## 16  &lt;NA&gt;        &lt;NA&gt;        timepoint:following
+## 17  &lt;NA&gt;        &lt;NA&gt; vowel1:timepoint:following
+## 18  &lt;NA&gt;        &lt;NA&gt; vowel2:timepoint:following
+## 19  &lt;NA&gt;        &lt;NA&gt; vowel3:timepoint:following
+## 20  &lt;NA&gt;        &lt;NA&gt; vowel4:timepoint:following
+## 21  21 1 participant                          1
+## 22  22 1 participant                     vowel1
+## 23  23 1 participant                     vowel2
+## 24  24 1 participant                     vowel3
+## 25  25 1 participant                     vowel4
+## 26  26 1 participant                  timepoint
+## 27  27 1 participant           vowel1:timepoint
+## 28  28 1 participant           vowel2:timepoint
+## 29  29 1 participant           vowel3:timepoint
+## 30  30 1 participant           vowel4:timepoint
+## 31  31 1 participant                  following
+## 32  32 1 participant           vowel1:following
+## 33  33 1 participant           vowel2:following
+## 34  34 1 participant           vowel3:following
+## 35  35 1 participant           vowel4:following
+## 36  36 1 participant        timepoint:following
+## 37  37 1 participant vowel1:timepoint:following
+## 38  38 1 participant vowel2:timepoint:following
+## 39  39 1 participant vowel3:timepoint:following
+## 40  40 1 participant vowel4:timepoint:following
+## 41  41 1        word                          1
+## 42  42 1        word                  timepoint
+##                                           code block
+## 1                                      NA NA 1     1
+## 2                                 NA NA vowel1     2
+## 3                                 NA NA vowel2     3
+## 4                                 NA NA vowel3     4
+## 5                                 NA NA vowel4     5
+## 6                              NA NA timepoint     6
+## 7                       NA NA vowel1:timepoint     7
+## 8                       NA NA vowel2:timepoint     8
+## 9                       NA NA vowel3:timepoint     9
+## 10                      NA NA vowel4:timepoint    10
+## 11                             NA NA following    11
+## 12                      NA NA vowel1:following    12
+## 13                      NA NA vowel2:following    13
+## 14                      NA NA vowel3:following    14
+## 15                      NA NA vowel4:following    15
+## 16                   NA NA timepoint:following    16
+## 17            NA NA vowel1:timepoint:following    17
+## 18            NA NA vowel2:timepoint:following    18
+## 19            NA NA vowel3:timepoint:following    19
+## 20            NA NA vowel4:timepoint:following    20
+## 21                          21 1 participant 1    21
+## 22                     22 1 participant vowel1    22
+## 23                     23 1 participant vowel2    23
+## 24                     24 1 participant vowel3    24
+## 25                     25 1 participant vowel4    25
+## 26                  26 1 participant timepoint    26
+## 27           27 1 participant vowel1:timepoint    27
+## 28           28 1 participant vowel2:timepoint    28
+## 29           29 1 participant vowel3:timepoint    29
+## 30           30 1 participant vowel4:timepoint    30
+## 31                  31 1 participant following    31
+## 32           32 1 participant vowel1:following    32
+## 33           33 1 participant vowel2:following    33
+## 34           34 1 participant vowel3:following    34
+## 35           35 1 participant vowel4:following    35
+## 36        36 1 participant timepoint:following    36
+## 37 37 1 participant vowel1:timepoint:following    37
+## 38 38 1 participant vowel2:timepoint:following    38
+## 39 39 1 participant vowel3:timepoint:following    39
+## 40 40 1 participant vowel4:timepoint:following    40
+## 41                                 41 1 word 1    41
+## 42                         42 1 word timepoint    42
+</code></pre>
+
+<p>We next need to instruct <code>buildmer</code> that terms belonging to the same vowel terms should be evaluated as a single group. This can be done by giving them the same identifier in the <code>block</code> column. This can be any numeric or character string, as long as it is the same for terms belonging to the same block.</p>
+
+<pre><code class="r">terms[ 2: 5,&#39;block&#39;] &lt;- &#39;same1&#39;
+terms[ 7:10,&#39;block&#39;] &lt;- &#39;same2&#39;
+terms[12:15,&#39;block&#39;] &lt;- &#39;same3&#39;
+terms[17:20,&#39;block&#39;] &lt;- &#39;same4&#39;
+terms[22:25,&#39;block&#39;] &lt;- &#39;same5&#39;
+terms[27:30,&#39;block&#39;] &lt;- &#39;same6&#39;
+terms[32:35,&#39;block&#39;] &lt;- &#39;same7&#39;
+terms[37:40,&#39;block&#39;] &lt;- &#39;same8&#39;
+</code></pre>
+
+<p>Finally, we can instruct <code>buildmer</code> to use this specially-crafted <code>terms</code> object by simply passing it along instead of a regular formula. <code>buildmer</code> will recognize what is going on, and look for an additional <code>dep</code> argument for the name of the dependent variable in the data frame (provided as a character string).</p>
+
+<pre><code class="r">m &lt;- buildmer(terms,data=vowels,dep=&#39;f1&#39;,control=lmerControl(optimizer=&#39;bobyqa&#39;))
+</code></pre>
+
+<p>This approach allows random slopes for <code>vowel</code> and for <code>vowel:timepoint</code> to make it in, both of which significantly improve model fit. This model seems much more adequate for statistical inference.</p>
+
+<h1>Other options</h1>
+
+<p>Because <code>buildmer</code> does not do any model fitting by itself but is only an administrative formula processor around pre-existing modeling fuctions, it was straightforward to extend it beyond its original purpose of mixed-effects models. The logical extension of <code>buildmer</code> to GAMMs is fully supported (with the exception of <code>gamm</code> models; see <code>buildgamm()</code> for options). Relevant functions are available as <code>buildgam</code>, <code>buildbam</code>, and <code>buildgamm4</code>. <code>glmmTMB</code> models are also supported, although their syntax for covariance structures (e.g. <code>diag(timepoint | participant)</code>) is not; these models are still useful for their ability to handle autocorrelation, zero-inflation, and to use REML for GLMMs. At the request of Willemijn Heeren, <code>buildmer</code> was also extended to handle multinomial-logistic-regression models fitted by function <code>multinom</code> from package <code>nnet</code>. It is also possible to use <code>buildjulia</code> to drive Douglas Bates&#39;s <code>MixedModels</code> package for Julia.</p>
+
+<h1>References</h1>
+
+</body>
+
+</html>
