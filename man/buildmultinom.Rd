@@ -5,10 +5,11 @@
 \title{Use buildmer to perform stepwise elimination for \code{multinom()} models from package \code{nnet}}
 \usage{
 buildmultinom(formula, data = NULL, cl = NULL, direction = c("order",
-  "backward"), crit = "LRT", calc.summary = TRUE, quiet = FALSE, ...)
+  "backward"), crit = "LRT", include = NULL, calc.summary = TRUE,
+  quiet = FALSE, ...)
 }
 \arguments{
-\item{formula}{The model formula for the maximal model you would like to fit, if possible. Supports \code{lme4} random effects and \code{gamm4} smooth terms.}
+\item{formula}{The model formula for the maximal model you would like to fit, if possible.}
 
 \item{data}{The data to fit the models to.}
 
@@ -16,25 +17,15 @@ buildmultinom(formula, data = NULL, cl = NULL, direction = c("order",
 
 \item{direction}{Character string or vector indicating the direction for stepwise elimination; possible options are \code{'order'} (order terms by their contribution to the model), \code{'backward'} (backward elimination), \code{'forward'} (forward elimination, implies \code{order}). The default is the combination \code{c('order','backward')}, to first make sure that the model converges and to then perform backward elimination; other such combinations are perfectly allowed.}
 
-\item{crit}{Character string or vector determining the criterion used to test terms for elimination. Possible options are \code{'LRT'} (default), \code{'AIC'}, and \code{'BIC'}.}
+\item{crit}{Character string or vector determining the criterion used to test terms for elimination. Possible options are \code{'LRT'} (likelihood-ratio test; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), and \code{'BIC'} (Bayesian Information Criterion).}
+
+\item{include}{A character vector of terms that will be kept in the model at all times. These do not need to be specified separately in the \code{formula} argument.}
 
 \item{calc.summary}{Logical indicating whether to also calculate the summary table for the final model after term elimination.}
 
 \item{quiet}{Logical indicating whether to suppress progress messages.}
 
 \item{...}{Additional options to be passed to \code{multinom()}.}
-}
-\value{
-A \code{buildmer} object containing the following slots:
-\itemize{
-\item \code{model}: the final model containing only the terms that survived elimination
-\item \code{p}: the parameter list used in the various buildmer modules. Things of interest this list includes are, among others:
-\itemize{
-\item \code{results}: a dataframe containing the results of the elimination process
-\item \code{messages}: any warning messages
-} This information is also printed as part of the \code{show()} method.
-\item \code{summary}: the model's summary, if \code{calc.summary=TRUE} was passed
-}
 }
 \description{
 Use buildmer to perform stepwise elimination for \code{multinom()} models from package \code{nnet}
@@ -47,5 +38,5 @@ example(birthwt)
 bwt.mu <- buildmultinom(low ~ age*lwt*race*smoke,bwt)
 }
 \seealso{
-[buildmer()]
+\code{\link[=buildmer]{buildmer()}}
 }
