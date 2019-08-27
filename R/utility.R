@@ -7,61 +7,61 @@
 #' form <- Reaction ~ Days + (1|Subject)
 #' add.terms(form,'Days|Subject')
 #' add.terms(form,'(0+Days|Subject)')
+#' add.terms(form,c('many','more|terms','to|terms','(be|added)','to|test'))
 #' @export
 add.terms <- function (formula,add) {
-	innerapply <- function (random.terms,FUN) sapply(random.terms,function (term) sapply(get.random.terms(term),FUN))
-
 	dep <- as.character(formula[2])
 	terms <- terms(formula,keep.order=T)
 	intercept <- attr(terms,'intercept')
 	terms <- attr(terms,'term.labels')
 	fixed.terms <- Filter(Negate(is.random.term),terms)
 	random.terms <- Filter(is.random.term,terms)
-	if (length(random.terms)) random.terms <- paste('(',random.terms,')')
+	if (length(random.terms)) random.terms <- sapply(random.terms,function (x) if (mkTerm(x)[[1]] != '(') paste0('(',x,')') else x)
 
 	for (term in add) {
 		if (is.random.term(term)) {
-			if (substr(term,nchar(term),nchar(term)) == ')') {
+			bar <- mkTerm(term)
+			if (bar[[1]] == '(') {
 				# independent term: tack it on at the end
 				random.terms <- c(random.terms,term)
 				next
 			}
-			for (bar in get.random.terms(term)) {
-				bar.grouping <- as.character(bar[3])
-				bar.terms <- bar[[2]]
-				# Find suitable terms for 'intruding', i.e.: can we add the term requested to a pre-existing term group?
-				suitable <- if (length(random.terms)) which(innerapply(random.terms,function (term) term[[3]] == bar.grouping)) else NULL
-				if (length(suitable)) {
-					random.terms[[suitable[1]]] <- innerapply(random.terms[[suitable[1]]],function (term) {
-						grouping <- as.character(term[3])
-						terms <- as.character(term[2])
-						form <- stats::as.formula(paste0('~',terms))
-						terms <- terms(form,keep.order=T)
-						intercept <- attr(terms,'intercept')
-						terms <- attr(terms,'term.labels')
-						terms <- c(terms,bar.terms)
-						if (intercept) terms <- c('1',terms)
-						else terms[[1]] <- paste0('0 + ',terms[[1]])
-						terms <- paste(terms,collapse=' + ')
-						paste0('(',terms,' | ',grouping,')')
-					})
-				} else {
-					#still have to tack it on at the end in the end...
-					term <- paste(bar.terms,collapse=' + ')
-					if (!any(bar.terms == '1')) term <- paste0('0 + ',term) #for some reason, "!'1' %in% bar.terms" complains about requiring vector arguments... well duh?
-					random.terms <- c(random.terms,paste0('(',term,' | ',bar.grouping,')'))
-				}
+			bar.grouping <- as.character(bar[3])
+			bar.terms <- bar[[2]]
+			# Find suitable terms for 'intruding', i.e.: can we add the term requested to a pre-existing term group?
+			suitable <- if (length(random.terms)) which(sapply(random.terms,function (term) mkTerm(term)[[2]][[3]] == bar.grouping)) else NULL
+			if (length(suitable)) {
+				random.terms[[suitable[1]]] <- sapply(random.terms[[suitable[1]]],function (x) {
+					bar <- mkTerm(x)[[2]]
+					grouping <- as.character(bar[3])
+					terms <- as.character(bar[2])
+					form <- mkForm(terms)
+					terms <- terms(form,keep.order=T)
+					intercept <- attr(terms,'intercept')
+					terms <- attr(terms,'term.labels')
+					terms <- c(terms,bar.terms)
+					if (intercept) terms <- c('1',terms)
+					else terms[[1]] <- paste0('0 + ',terms[[1]])
+					terms <- paste(terms,collapse=' + ')
+					paste0('(',terms,' | ',grouping,')')
+				})
+			} else {
+				#still have to tack it on at the end in the end...
+				term <- paste(bar.terms,collapse=' + ')
+				if (!any(bar.terms == '1')) term <- paste0('0 + ',term) #for some reason, "!'1' %in% bar.terms" complains about requiring vector arguments... well duh?
+				random.terms <- c(random.terms,paste0('(',term,' | ',bar.grouping,')'))
 			}
 		} else fixed.terms <- c(fixed.terms,term)
 	}
 	terms <- c(fixed.terms,random.terms)
-	if (length(terms)) return(stats::reformulate(terms,dep,intercept))
-	stats::as.formula(paste0(dep,'~',as.numeric(intercept)))
+	if (length(terms)) return(stats::reformulate(terms,dep,intercept,environment(formula)))
+	stats::as.formula(paste0(dep,'~',as.numeric(intercept)),environment(formula))
 }
 
 #' Convert a buildmer term list into a proper model formula
 #' @param dep The dependent variable.
 #' @param terms The term list.
+#' @param env The environment of the formula to return.
 #' @return A formula.
 #' @examples
 #' library(buildmer)
@@ -74,10 +74,11 @@ add.terms <- function (formula,add) {
 #' check <- function (f) resid(lmer(f,sleepstudy))
 #' all.equal(check(form1),check(form2))
 #' @export
-build.formula <- function (dep,terms) {
-	if (is.na(terms[1,'grouping']) && terms[1,'term'] == '1') {
+build.formula <- function (dep,terms,env=parent.frame()) {
+	fixed.intercept <- is.na(terms$grouping) & terms$term == '1'
+	if (any(fixed.intercept)) {
 		form <- stats::as.formula(paste(dep,'~1'))
-		terms <- terms[-1,]
+		terms <- terms[!fixed.intercept,]
 	} else  form <- stats::as.formula(paste(dep,'~0'))
 	while (nrow(terms)) {
 		# we can't use a simple for loop: the data frame will mutate in-place when we encounter grouping factors
@@ -95,11 +96,13 @@ build.formula <- function (dep,terms) {
 		}
 		form <- add.terms(form,cur)
 	}
+	environment(form) <- env
 	form
 }
 
 #' Test a model for convergence
 #' @param model The model object to test.
+#' @param singular.ok A logical indicating whether singular fits are accepted as `converged' or not. Relevant only for lme4 models.
 #' @return Logical indicating whether the model converged.
 #' @examples
 #' library(buildmer)
@@ -110,14 +113,13 @@ build.formula <- function (dep,terms) {
 #'             optimizer='bobyqa',optCtrl=list(maxfun=1)))
 #' sapply(c(good1,good2,bad),conv)
 #' @export
-conv <- function (model) {
+conv <- function (model,singular.ok=FALSE) {
 	if (inherits(model,'try-error')) return(F)
 	if (inherits(model,'gam')) {
 		if (!is.null(model$outer.info)) {
-			boi <- model$outer.info
-			if (boi$conv != 'full convergence') return(F)
-			ev <- eigen(boi$hess)$values
-			if (min(ev) <= -1e-04) return(F)
+			if (!is.null(model$outer.info$conv) && model$outer.info$conv != 'full convergence') return(F)
+			ev <- eigen(model$outer.info$hess)$values
+			if (min(ev) < -.002) return(F)
 		} else {
 			if (!length(model$sp)) return(T)
 			if (!model$mgcv.conv$fully.converged) return(F)
@@ -128,15 +130,15 @@ conv <- function (model) {
 	if (inherits(model,'merMod')) {
 		if (model@optinfo$conv$opt != 0) return(F)
 		if (!length(model@optinfo$conv$lme4)) return(T)
-		if (is.null(model@optinfo$conv$lme4$code)) return(F) #happens when fit is singular
-		if (model@optinfo$conv$lme4$code != 0) return(F)
+		if (is.null(model@optinfo$conv$lme4$code)) return(singular.ok)
+		if (any(model@optinfo$conv$lme4$code != 0)) return(F)
 	}
 	if (inherits(model,'glmmTMB')) {
 		if (!is.null(model$fit$convergence) && model$fit$convergence != 0) return(F)
 		if (!is.null(model$sdr$pdHess)) {
 			if (!model$sdr$pdHess) return(F)
-			eigval <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
-			if (inherits(eigval,'try-error') || (min(eigval) < .Machine$double.eps*10)) return(F)
+			ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
+			if (inherits(ev,'try-error') || (min(ev) < -.002)) return(F)
 		}
 		return(T)
 	}
@@ -168,7 +170,6 @@ remove.terms <- function (formula,remove) {
 		})
 		unlist(terms,recursive=F)
 	}
-
 	get.random.list <- function (formula) {
 		bars <- lme4::findbars(formula)
 		groups <- unique(sapply(bars,function (x) x[[3]]))
@@ -182,7 +183,6 @@ remove.terms <- function (formula,remove) {
 		names(randoms) <- groups
 		randoms
 	}
-
 	marginality.ok <- function (remove,have) {
 		forbidden <- if (!all(have == '1')) '1' else NULL
 		for (x in have) {
@@ -193,7 +193,6 @@ remove.terms <- function (formula,remove) {
 		}
 		!remove %in% forbidden
 	}
-
 	unwrap.terms <- function (terms,inner=F,intercept=F) {
 		form <- stats::as.formula(paste0('~',terms))
 		terms <- terms(form,keep.order=T)
@@ -261,19 +260,22 @@ remove.terms <- function (formula,remove) {
 	terms <- Filter(Negate(is.null),terms)
 
 	# Wrap up
-	if (length(terms)) return(stats::as.formula(paste0(dep,'~',paste(terms,collapse='+'))))
-	stats::as.formula(paste0(dep,'~1'))
+	if (length(terms)) return(stats::as.formula(paste0(dep,'~',paste(terms,collapse='+')),environment(formula)))
+	stats::as.formula(paste0(dep,'~1'),environment(formula))
 }
 
 #' Parse a formula into a buildmer terms list
 #' @param formula A formula.
+#' @param group A character vector of regular expressions. Terms matching the same regular expression are assigned the same block, and will be evaluated together in buildmer functions.
 #' @return A buildmer terms list, which is just a normal data frame.
 #' @examples
-#' form <- diag(f1 ~ vowel*timepoint*following + ((vowel1+vowel2+vowel3+vowel4)*timepoint*
-#'                   following|participant) + (timepoint|word))
+#' form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following +
+#'              ((vowel1+vowel2+vowel3+vowel4)*timepoint*following|participant) + (timepoint|word))
 #' tabulate.formula(form)
+#' tabulate.formula(form,group='vowel[1-4]')
+#' @seealso buildmer-package
 #' @export
-tabulate.formula <- function (formula) {
+tabulate.formula <- function (formula,group=NULL) {
 	decompose.random.terms <- function (terms) {
 		terms <- lapply(terms,function (x) {
 			x <- unwrap.terms(x,inner=T)
@@ -284,7 +286,6 @@ tabulate.formula <- function (formula) {
 		})
 		unlist(terms,recursive=F)
 	}
-
 	get.random.list <- function (formula) {
 		bars <- lme4::findbars(formula)
 		groups <- unique(sapply(bars,function (x) x[[3]]))
@@ -297,6 +298,10 @@ tabulate.formula <- function (formula) {
 		})
 		names(randoms) <- groups
 		randoms
+	}
+	mkGroups <- function (t) {
+		for (x in group) t <- gsub(x,x,t,perl=T)
+		t
 	}
 
 	dep <- as.character(formula[2])
@@ -318,18 +323,14 @@ tabulate.formula <- function (formula) {
 				g <- names(terms)[j]
 				terms <- terms[[j]]
 				if (!length(terms)) return(NULL)
-				data.frame(index=paste(i,j),grouping=g,term=terms,stringsAsFactors=F)
+				ix <- paste(i,j)
+				data.frame(index=ix,grouping=g,term=terms,code=paste(ix,g,terms),block=paste(NA,g,mkGroups(terms)),stringsAsFactors=F)
 			})
 			terms <- Filter(Negate(is.null),terms)
 			if (!length(terms)) return(NULL)
 			do.call(rbind,terms)
-		} else data.frame(index=NA,grouping=NA,term=term,stringsAsFactors=F)
+		} else data.frame(index=NA,grouping=NA,term=term,code=term,block=paste(NA,NA,mkGroups(term)),stringsAsFactors=F)
 	})
 	terms <- Filter(Negate(is.null),terms)
-
-	# Wrap up
-	tab <- do.call(rbind,terms)
-	tab$code <- do.call(paste,tab[1:3])
-	tab$block <- 1:nrow(tab)
-	tab
+	do.call(rbind,terms)
 }

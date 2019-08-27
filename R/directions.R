@@ -3,7 +3,7 @@ backward <- function (p) {
 
 	fit.references.parallel <- function (p) {
 		if (p$parallel) parallel::clusterExport(p$cl,'p',environment())
-		if (!p$quiet) message('Fitting ML and REML reference models')
+		message('Fitting ML and REML reference models')
 		while (T) {
 			res <- p$parply(c(T,F),function (x) {
 				p$reml <- x
@@ -18,9 +18,9 @@ backward <- function (p) {
 		}
 	}
 	reduce.noconv <- function (p) {
-		if (!p$quiet) message('Convergence failure. Reducing terms and retrying...')
+		message('Convergence failure. Reducing terms and retrying...')
 		p$tab <- p$tab[-nrow(p$tab),]
-		p$formula <- build.formula(dep,p$tab)
+		p$formula <- build.formula(dep,p$tab,p$env)
 		p
 	}
 
@@ -28,13 +28,13 @@ backward <- function (p) {
 	if (is.null(p$tab)) p$tab <- tabulate.formula(p$formula)
 	if (p$parallel) parallel::clusterExport(p$cl,c('conv','build.formula','unravel','can.remove','get2LL','getdf'),environment())
 	while (T) {
-		need.reml <- any(sapply(unique(p$tab$block),function (b) {
+		need.reml <- p$can.use.REML && any(sapply(unique(p$tab$block),function (b) {
 			i <- which(p$tab$block == b)
 			any(!is.na(p$tab[i,'grouping']))
 		}))
 		if (need.reml && is.null(p$cur.ml) && is.null(p$cur.reml)) p <- fit.references.parallel(p)
 		if (is.null(p$cur.ml)) {
-			if (!p$quiet) message('Fitting ML reference model')
+			message('Fitting ML reference model')
 			p$reml <- F
 			p$cur.ml <- p$fit(p,p$formula)
 			if (!conv(p$cur.ml)) {
@@ -43,7 +43,7 @@ backward <- function (p) {
 			}
 		}
 		if (need.reml && is.null(p$cur.reml)) {
-			if (!p$quiet) message('Fitting REML reference model')
+			message('Fitting REML reference model')
 			p$reml <- T
 			p$cur.reml <- p$fit(p,p$formula)
 			if (!conv(p$cur.reml)) {
@@ -52,13 +52,13 @@ backward <- function (p) {
 			}
 		}
 
-		if (!p$quiet) message('Testing terms')
-		results <- p$parply(unique(p$tab$block),function (b) {
+		message('Testing terms')
+		results <- p$parply(unique(p$tab$block[!is.na(p$tab$block)]),function (b) {
 			i <- which(p$tab$block == b)
-			if (!can.remove(p$tab,i) || any(p$tab[i,'term'] %in% p$include)) return(list(val=rep(NA,length(i))))
+			if (!can.remove(p$tab,i) || any(paste(p$tab[i,'term'],p$tab[i,'grouping']) %in% paste(p$include$term,p$include$grouping))) return(list(val=rep(NA,length(i))))
 			p$reml <- all(!is.na(p$tab[i,'grouping']))
 			m.cur <- if (p$reml) p$cur.reml else p$cur.ml
-			f.alt <- build.formula(dep,p$tab[-i,])
+			f.alt <- build.formula(dep,p$tab[-i,],p$env)
 			m.alt <- p$fit(p,f.alt)
 			val <- if (conv(m.alt)) p$crit(m.alt,m.cur) else NaN
 			if (p$crit.name == 'LRT' && p$reml) val <- val - log(2) #divide by 2 per Pinheiro & Bates 2000; remember that we are on the log scale
@@ -74,16 +74,14 @@ backward <- function (p) {
 			p$tab$Iteration <- p$results$Iteration[nrow(p$results)] + 1
 			p$results <- rbind(p$results,p$tab)
 		}
-		if (!p$quiet) {
-			progrep <- p$tab
-			progrep$index <- progrep$code <- progrep$ok <- NULL
-			if (p$crit.name == 'LRT') progrep$LRT <- exp(results)
-			print(progrep)
-		}
+		progrep <- p$tab
+		progrep$index <- progrep$code <- progrep$ok <- NULL
+		if (p$crit.name == 'LRT') progrep$LRT <- exp(results)
+		print(progrep)
 		remove <- p$elim(results)
 		remove <- which(!is.na(remove) & !is.nan(remove) & remove)
 		if (length(remove) == 0) {
-			if (!p$quiet) message('All terms are significant')
+			message('All terms are significant')
 			p$model <- if (need.reml) p$cur.reml else p$cur.ml
 			return(p)
 		}
@@ -91,13 +89,13 @@ backward <- function (p) {
 		# 4. Remove the worst offender(s) and continue
 		remove <- remove[p$tab[remove,p$crit.name] == max(p$tab[remove,p$crit.name])]
 		p$tab <- p$tab[-remove,]
-		p$formula <- build.formula(dep,p$tab)
+		p$formula <- build.formula(dep,p$tab,p$env)
 		p$cur.ml <- p$cur.reml <- NULL
 		if (length(results) == 1) {
 			# Recycle the current model as the next reference model
 			p[[ifelse(p$reml,'cur.reml','cur.ml')]] <- results[[remove]]$model
 		}
-		if (!p$quiet) message('Updating formula: ',as.character(list(p$formula)))
+		message('Updating formula: ',as.character(list(p$formula)))
 	}
 }
 
@@ -133,12 +131,10 @@ can.remove <- function (tab,i) {
 
 forward <- function (p) {
 	if (p$ordered != p$crit.name) p <- order(p) else if (p$ordered == 'custom') warning("Assuming, but not checking, that direction='order' had used the same elimination criterion as requested for forward stepwise. If this is not the case, add an explicit 'order' step before the 'forward' step using the desired criterion.")
-	if (!p$quiet) {
-		progrep <- p$tab
-		progrep$index <- progrep$code <- progrep$ok <- NULL
-		if (p$crit.name == 'LRT') progrep$LRT <- exp(progrep$LRT)
-		print(progrep)
-	}
+	progrep <- p$tab
+	progrep$index <- progrep$code <- progrep$ok <- NULL
+	if (p$crit.name == 'LRT') progrep$LRT <- exp(progrep$LRT)
+	print(progrep)
 	dep <- as.character(p$formula[[2]])
 	remove <- p$elim(p$tab$score)
 	# Retain all terms up to the last significant one, even if they were not significant themselves
@@ -149,7 +145,7 @@ forward <- function (p) {
 	p$tab[,p$crit.name] <- p$tab$score
 	p$results <- p$tab
 	p$tab <- p$tab[!(remove & remove.ok),]
-	p$formula <- build.formula(dep,p$tab)
+	p$formula <- build.formula(dep,p$tab,p$env)
 	p$reml <- T
 	p$model <- p$fit(p,p$formula)
 	p
@@ -223,17 +219,17 @@ order <- function (p) {
 			check <- can.eval(check)
 			check <- check[check$ok,]
 			if (!nrow(check)) {
-				if (!p$quiet) message('Could not proceed ordering terms')
+				message('Could not proceed ordering terms')
 				p$tab <- have
 				p$model <- cur
 				return(p)
 			}
-			if (!p$quiet) message(paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
+			message(paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
 			if (p$parallel) parallel::clusterExport(p$cluster,c('check','have','p'),environment())
 			mods <- p$parply(unique(check$block),function (b) {
 				check <- check[check$block == b,]
-				tab <- rbind(have[,1:3],check[,1:3])
-				form <- build.formula(dep,tab)
+				tab <- rbind(have[,c('index','grouping','term')],check[,c('index','grouping','term')])
+				form <- build.formula(dep,tab,p$env)
 				mod <- list(p$fit(p,form))
 				rep(mod,nrow(check))
 			})
@@ -242,7 +238,7 @@ order <- function (p) {
 			if (p$crit.name == 'LRT' && p$reml) check$score <- check$score - log(2) #divide by 2 per Pinheiro & Bates 2000; remember that we are on the log scale
 			ok <- Filter(function (x) !is.na(x) & !is.nan(x),check$score)
 			if (!length(ok)) {
-				if (!p$quiet) message('None of the models converged - giving up ordering attempt.')
+				message('None of the models converged - giving up ordering attempt.')
 				p$tab <- have
 				p$model <- cur
 				return(p)
@@ -254,18 +250,18 @@ order <- function (p) {
 				# In principle, there should be only one winner. If there are multiple candidates which happen to add _exactly_ the same amount of information to the model, this is
 				# suspicious. Probably the reason is that this is an overfitted model and none of the candidate terms add any new information. The solution is to add both terms, but this
 				# needs an extra fit to obtain the new 'current' model.
-				form <- build.formula(dep,have)
+				form <- build.formula(dep,have,p$env)
 				cur <- p$fit(p,form)
 				if (!conv(cur)) {
-					if (!p$quiet) message('The reference model for the next step failed to converge - giving up ordering attempt.')
+					message('The reference model for the next step failed to converge - giving up ordering attempt.')
 					return(p)
 				}
 			}
-			if (!p$quiet) message(paste0('Updating formula: ',as.character(list(build.formula(dep,have)))))
+			message(paste0('Updating formula: ',as.character(list(build.formula(dep,have)))))
 		}
 	}
 
-	if (!p$quiet) message('Determining predictor order')
+	message('Determining predictor order')
 	if (is.null(p$tab)) p$tab <- tabulate.formula(p$formula) else p$tab$ok <- p$tab$score <- NULL
 	dep <- as.character(p$formula[2])
 	tab <- p$tab
@@ -277,7 +273,7 @@ order <- function (p) {
 		fxd <- is.na(tab$grouping)
 	}
 	else p$tab <- cbind(tab[0,],ok=logical(),score=numeric())
-	if (!is.null(p$include)) p$tab <- rbind(p$tab,data.frame(index=NA,grouping=NA,term=p$include,code=p$include,block=1,ok=T,score=NA))
+	if (!is.null(p$include)) p$tab <- rbind(p$tab,transform(p$include,block=NA,ok=T,score=NA))
 
 	p$reml <- F
 	if (p$reduce.fixed  && any( fxd)) p <- reorder(p,tab[fxd,])
@@ -285,6 +281,6 @@ order <- function (p) {
 		p$reml <- T
 		p <- reorder(p,tab[!fxd,])
 	}
-	p$formula <- build.formula(dep,p$tab)
+	p$formula <- build.formula(dep,p$tab,p$env)
 	p
 }

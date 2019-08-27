@@ -1,7 +1,10 @@
+abort.PQL <- function (p) if (!is.gaussian(p$family) && ('I_KNOW_WHAT_I_AM_DOING' %in% p$dots || !isTRUE(p$I_KNOW_WHAT_I_AM_DOING))) stop('You are attempting to fit a non-Gaussian model using buildgam() or buildbam(). For non-Gaussian errors, bam() and gam() use PQL, so likelihood-based model comparisons are not valid! It is recommended to use gamm4() instead, or if this is not possible, to directly fit the full model and use the argument select=TRUE to perform term elimination. If you really know what you are doing, pass I_KNOW_WHAT_I_AM_DOING to your buildgam()/buildbam() invocation to sidestep this error.') else within.list(p,{ dots$I_KNOW_WHAT_I_AM_DOING <- NULL })
+
 buildmer.fit <- function (p) {
 	if (is.data.frame(p$formula)) {
 		p$tab <- p$formula
-		p$formula <- build.formula(p$dots$dep,p$tab)
+		if (is.null(p$dots$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
+		p$formula <- build.formula(p$dots$dep,p$tab,p$env)
 		p$dots$dep <- NULL
 	} else p$tab <- tabulate.formula(p$formula)
 	p$filtered.dots <- p$dots[names(p$dots) != 'control' & names(p$dots) %in% names(c(formals(stats::lm),formals(stats::glm)))]
@@ -10,10 +13,18 @@ buildmer.fit <- function (p) {
 		p$parply <- lapply
 	} else {
 		p$parallel <- T
-		p$parply <- function (x,fun) parallel::parLapply(p$cluster,x,fun)
-		parallel::clusterExport(p$cluster,c('build.formula','p','conv','add.terms','is.random.term','get.random.terms','has.smooth.terms','run','patch.gamm4','patch.lm','patch.lmer'),environment())
+		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
+		p$env <- .GlobalEnv
+		parallel::clusterExport(p$cluster,privates,environment())
 	}
-	if (!is.null(p$include) && !is.character(p$include)) p$include <- attr(stats::terms(p$include),'term.labels')
+	if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
+
+	# the below comment will be found even if just printing the parsed R code:
+	'If you found this piece of code, congratulations: you can now override the internal buildmer parameter list!'
+	if ('p' %in% names(p$dots)) {
+		p <- c(p,p$dots$p)
+		p$dots$p <- NULL
+	}
 
 	p$reml <- T
 	p$ordered <- ''
@@ -22,27 +33,30 @@ buildmer.fit <- function (p) {
 	if (length(p$direction)) {
 		if (length(crits) != length(p$direction)) stop("Arguments for 'crit' and 'direction' don't make sense together -- they should have the same lengths!")
 		if (length(p$direction)) for (i in 1:length(p$direction)) p <- do.call(p$direction[i],list(p=within.list(p,{ crit <- crits[[i]] })))
-		if (p$crit.name == 'LRT' && 'LRT' %in% names(p$results)) p$results$LRT <- exp(p$results$LRT)
+		if ('LRT' %in% p$crit.name && 'LRT' %in% names(p$results)) p$results$LRT <- exp(p$results$LRT)
 	}
 	p
 }
 
 buildmer.finalize <- function (p) {
-	if (is.null(p$model) && !p$quiet) {
+	if (is.null(p$model)) {
 		message('Fitting the final model')
-		p$model <- p$fit(p,p$formula)
+		p$model <- p$parply(list(p),p$fit,p$formula)[[1]]
 	}
-	if (inherits(p$model,'lmerMod') && requireNamespace('lmerTest')) {
+	if (inherits(p$model,'lmerMod') && requireNamespace('lmerTest',quietly=T)) {
 		# Even if the user did not request lmerTest ddf, convert the model to an lmerTest object anyway in case the user is like me and only thinks about the ddf after having fitted the model
 		message('Finalizing by converting the model to lmerTest')
-		if ('control' %in% names(p$dots)) control <- p$dots$control
-		p$model <- lmerTest::as_lmerModLmerTest(p$model)
+		p$model@call$data <- p$data
+		if ('subset' %in% names(p$dots)) p$model@call$subset <- p$dots$subset
+		if ('control' %in% names(p$dots)) p$model@call$control <- p$dots$control
+		p$model <- patch.lmer(p,lmerTest::as_lmerModLmerTest,list(p$model))
 	}
 	ret <- mkBuildmer(model=p$model,p=p)
 	ret@p$in.buildmer <- T
 	if (p$calc.anova) ret@anova <- anova.buildmer(ret,ddf=p$ddf)
 	if (p$calc.summary) ret@summary <- summary.buildmer(ret,ddf=p$ddf)
 	ret@p$in.buildmer <- F
+	if (!is.null(p$cl)) try(parallel::clusterCall(p$cl,rm,list=privates),silent=T)
 	ret
 }
 
@@ -69,25 +83,35 @@ check.ddf <- function (ddf) {
 	}
 	ddf <- valid[i]
 	if (ddf %in% c('Wald','lme4')) return(ddf)
-	if (!requireNamespace('lmerTest')) {
+	if (!requireNamespace('lmerTest',quietly=T)) {
 		warning('lmerTest package is not available, could not calculate requested denominator degrees of freedom')
 		return('lme4')
 	}
-	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest')) {
+	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=T)) {
 		warning('pbkrtest package is not available, could not calculate Kenward-Roger denominator degrees of freedom')
 		return('lme4')
 	}
 	return(ddf)
 }
 
-get.random.terms <- function (term) lme4::findbars(stats::as.formula(paste0('~',term)))
 has.smooth.terms <- function (formula) length(mgcv::interpret.gam(formula)$smooth.spec) > 0
-is.smooth.term <- function (term) has.smooth.terms(stats::as.formula(paste0('~',list(term))))
-is.random.term <- function (term) length(get.random.terms(term)) > 0
-
+is.gaussian <- function (family) {
+	if (is.character(family)) family <- get(family)
+	if (is.function (family)) family <- family()
+	isTRUE(all.equal(family,gaussian()))
+}
+is.smooth.term <- function (term) has.smooth.terms(mkForm(list(term)))
+is.random.term <- function (term) {
+	term <- mkTerm(term)
+	if (is.name(term)) return(F)
+	return(term[[1]] == '|')
+}
 mkCrit <- function (crit) if (is.function(crit)) crit else get(paste0('crit.',crit))
-mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',crit))
 mkCritName <- function (crit) if (is.function(crit)) 'custom' else crit
+mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',crit))
+mkForm <- function (term) stats::as.formula(paste0('~',term))
+mkTerm <- function (term) mkForm(term)[[2]]
+privates <- c('p','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.gamm4','patch.lm','patch.lmer','patch.mertree','run')
 
 unpack.smooth.terms <- function (x) {
 	fm <- stats::as.formula(paste0('~',list(x)))
