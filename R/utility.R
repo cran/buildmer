@@ -53,9 +53,8 @@ add.terms <- function (formula,add) {
 			}
 		} else fixed.terms <- c(fixed.terms,term)
 	}
-	terms <- c(fixed.terms,random.terms)
-	if (length(terms)) return(stats::reformulate(terms,dep,intercept,environment(formula)))
-	stats::as.formula(paste0(dep,'~',as.numeric(intercept)),environment(formula))
+	terms <- c(as.numeric(intercept),fixed.terms,random.terms)
+	stats::as.formula(paste0(dep,'~',paste0(terms,collapse='+')),environment(formula))
 }
 
 #' Convert a buildmer term list into a proper model formula
@@ -118,8 +117,8 @@ conv <- function (model,singular.ok=FALSE) {
 	if (inherits(model,'gam')) {
 		if (!is.null(model$outer.info)) {
 			if (!is.null(model$outer.info$conv) && model$outer.info$conv != 'full convergence') return(F)
-			ev <- eigen(model$outer.info$hess)$values
-			if (min(ev) < -.002) return(F)
+			ev <- try(eigen(model$outer.info$hess)$values,silent=T)
+			if (inherits(ev,'try-error') || min(ev) < 10*.Machine$double.eps) return(F)
 		} else {
 			if (!length(model$sp)) return(T)
 			if (!model$mgcv.conv$fully.converged) return(F)
@@ -138,7 +137,7 @@ conv <- function (model,singular.ok=FALSE) {
 		if (!is.null(model$sdr$pdHess)) {
 			if (!model$sdr$pdHess) return(F)
 			ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
-			if (inherits(ev,'try-error') || (min(ev) < -.002)) return(F)
+			if (inherits(ev,'try-error') || (min(ev) < 10*.Machine$double.eps)) return(F)
 		}
 		return(T)
 	}
