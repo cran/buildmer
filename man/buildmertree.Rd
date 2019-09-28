@@ -5,11 +5,12 @@
 \title{Use \code{buildmer} to perform stepwise elimination for \emph{the random-effects part} of \code{lmertree()} and \code{glmertree()} models from package \code{glmertree}}
 \usage{
 buildmertree(formula, data = NULL, family = gaussian(), cl = NULL,
-  direction = "order", crit = "LL", include = NULL,
-  calc.summary = TRUE, left = NULL, right = NULL, ...)
+  direction = c("order", "backward"), crit = "AIC", include = NULL,
+  reduce.fixed = TRUE, reduce.random = TRUE, calc.summary = TRUE,
+  ...)
 }
 \arguments{
-\item{formula}{Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and \code{lme4}-style random effects. In the latter case, the additional arguments \code{left} and \code{right} must be specified as one-sided formulas containing the fixed part of the model and the partitioning part, respectively}
+\item{formula}{Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and the fixed and random effects for the regression part. In the latter case, the additional argument \code{partitioning} must be specified as a one-sided formula containing the partitioning part of the model.}
 
 \item{data}{See the general documentation under \code{\link{buildmer-package}}}
 
@@ -23,16 +24,20 @@ buildmertree(formula, data = NULL, family = gaussian(), cl = NULL,
 
 \item{include}{See the general documentation under \code{\link{buildmer-package}}}
 
+\item{reduce.fixed}{See the general documentation under \code{\link{buildmer-package}}}
+
+\item{reduce.random}{See the general documentation under \code{\link{buildmer-package}}}
+
 \item{calc.summary}{See the general documentation under \code{\link{buildmer-package}}}
 
-\item{left}{The left part of the \code{glmertree} formula, used if \code{formula} does not contain \code{glmertree}-specific terms. Note that if \code{left} is specified when \code{formula} is in \code{glmertree} format, \code{left} overrides the \code{formula} specification!}
-
-\item{right}{The right part of the \code{glmertree} formula, used if \code{formula} does not contain \code{glmertree}-specific terms. Note that if \code{right} is specified when \code{formula} is in \code{glmertree} format, \code{right} overrides the \code{formula} specification!}
-
-\item{...}{Additional options to be passed to \code{lmertree} or \code{glmertree}}
+\item{...}{Additional options to be passed to \code{lmertree} or \code{glmertree}. (They will also be passed to \code{(g)lmtree} in so far as they're applicable. The single exception is the \code{control} argument, which is assumed to be meant only for \code{(g)lmertree} and not for \code{(g)lmtree}, and will \emph{not} be passed on to \code{(g)lmtree}.)}
 }
 \description{
 Use \code{buildmer} to perform stepwise elimination for \emph{the random-effects part} of \code{lmertree()} and \code{glmertree()} models from package \code{glmertree}
+}
+\details{
+Note that the likelihood-ratio test is not available for \code{glmertree} models, as it cannot be assured that the models being compared are nested. The default is thus to use AIC.
+It is recommended to pass \code{joint=FALSE}, as this speeds up the fits (drastically so in the case of a generalized linear mixed model), and reduces the odds of the final \code{(g)lmer} model failing to converge or converging singularly.
 }
 \examples{
 library(buildmer)

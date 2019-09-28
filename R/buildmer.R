@@ -1,3 +1,49 @@
+#' Use \code{buildmer} to fit generalized linear mixed models using \code{mixed_model} from package \code{GLMMadaptive}
+#' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike in \code{mixed_model}, \code{buildGLMMadaptive} does not use a separate \code{random} argument!)
+#' @template data
+#' @template family
+#' @template common
+#' @template reduce
+#' @template summary
+#' @param ... Additional options to be passed to \code{mixed_model}
+#' @examples
+#' \donttest{
+#' # nonsensical model given these data
+#' model <- buildGLMMadaptive(stress ~ vowel + (vowel|word),family=binomial,data=vowels,nAGQ=1)
+#' }
+#' @details
+#' The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
+#' @template seealso
+#' @export
+buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.summary=TRUE,...) {
+	if (!requireNamespace('GLMMadaptive',quietly=T)) stop('Please install package GLMMadaptive')
+	p <- list(
+		formula=formula,
+		data=data,
+		family=family,
+		cluster=cl,
+		reduce.fixed=reduce.fixed,
+		reduce.random=reduce.random,
+		direction=direction,
+		crit=mkCrit(crit),
+		crit.name=mkCritName(crit),
+		elim=mkElim(crit),
+		fit=fit.GLMMadaptive,
+		include=include,
+		calc.anova=F,
+		calc.summary=calc.summary,
+		family.name=substitute(family),
+		data.name=substitute(data),
+		subset.name=substitute(subset),
+		control.name=substitute(control),
+		can.use.reml=F,
+		env=parent.frame(),
+		dots=list(...)
+	)
+	p <- buildmer.fit(p)
+	buildmer.finalize(p)
+}
+
 #' Use \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}
 #' @template formula
 #' @template data
@@ -19,7 +65,7 @@
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=TRUE,calc.summary=TRUE,...) {
+buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
 	p <- list(
 		formula=formula,
 		data=data,
@@ -40,7 +86,7 @@ buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=T,
+		can.use.reml=T,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -111,7 +157,7 @@ buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward
 		crit=crit,
 		crit.name='custom criterion',
 		elim=elim,
-		can.use.REML=F,
+		can.use.reml=F,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -139,7 +185,7 @@ buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildgam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=TRUE,calc.summary=TRUE,...) {
+buildgam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
 	p <- list(
 		formula=formula,
 		data=data,
@@ -160,7 +206,7 @@ buildgam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=T,
+		can.use.reml=T,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -174,9 +220,9 @@ buildgam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' @template data
 #' @template family
 #' @template common
+#' @template reduce
 #' @template anova
 #' @template summary
-#' @template reduce
 #' @param ddf The method used for calculating \emph{p}-values if all smooth terms were eliminated and \code{calc.summary=TRUE}. Options are \code{'Wald'} (default), \code{'Satterthwaite'} (if package \code{lmerTest} is available), \code{'Kenward-Roger'} (if packages \code{lmerTest} and \code{pbkrtest} are available), and \code{'lme4'} (no \emph{p}-values)
 #' @param ... Additional options to be passed to \code{gamm4}
 #' @examples
@@ -189,10 +235,12 @@ buildgam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' m <- buildgamm4(f1 ~ s(timepoint,by=following) +
 #'                      s(participant,timepoint,by=following,bs='fs'),data=vowels)
 #' }
+#' @details
+#' The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.anova=TRUE,calc.summary=TRUE,ddf='Wald',...) {
+buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.anova=FALSE,calc.summary=TRUE,ddf='Wald',...) {
 	if (!requireNamespace('gamm4',quietly=T)) stop('Please install package gamm4')
 	p <- list(
 		formula=formula,
@@ -214,7 +262,7 @@ buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c(
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=is.gaussian(family),
+		can.use.reml=is.gaussian(family),
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -271,7 +319,7 @@ buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=T,
+		can.use.reml=T,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -293,7 +341,7 @@ buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 #' m <- buildgls(f1 ~ timepoint*following,correlation=corAR1(form=~1|event),data=vowels)
 #' @template seealso
 #' @export
-buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=TRUE,calc.summary=TRUE,...) {
+buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
 	if (!requireNamespace('nlme',quietly=T)) stop('Please install package nlme')
 	p <- list(
 		formula=formula,
@@ -314,7 +362,7 @@ buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=T,
+		can.use.reml=T,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -361,7 +409,7 @@ buildjulia <- function (formula,data=NULL,family=gaussian(),include=NULL,julia_f
 		fit=fit.julia,
 		calc.anova=F,
 		calc.summary=F,
-		can.use.REML=is.gaussian(family),
+		can.use.reml=is.gaussian(family),
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -375,28 +423,31 @@ buildjulia <- function (formula,data=NULL,family=gaussian(),include=NULL,julia_f
 	buildmer.finalize(p)
 }
 
-#' Use \code{buildmer} to perform stepwise elimination of the fixed-effects part of mixed-effects models fit via \code{lme} from \code{nlme}
-#' @template formula
+#' Use \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}
+#' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike in \code{mixed_model}, \code{buildlme} does not use a separate \code{random} argument!)
 #' @template data
-#' @param random The random-effects specification for the model. This is not manipulated by \code{buildlme} in any way!
 #' @template common
+#' @template reduce
 #' @template anova
 #' @template summary
 #' @param ... Additional options to be passed to \code{lme}
 #' @examples
 #' library(buildmer)
-#' m <- buildlme(Reaction ~ Days,data=lme4::sleepstudy,random=~Days|Subject)
+#' m <- buildlme(Reaction ~ Days + (Days|Subject),data=lme4::sleepstudy)
+#' @details
+#' The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts. Correlation structures can be specified as part of the \code{...} argument, and are handled appropriately.
+#' Only a single grouping factor is allowed. The covariance matrix is always unstructured. If you want to use \code{nlme} covariance structures, you must (a) \emph{not} specify a \code{lme4} random-effects term in the formula, and (b) specify your own custom \code{random} argument as part of the \code{...} argument. Note that \code{buildlme} will merely pass this through; no term reordering or stepwise elimination is done on a user-provided \code{random} argument.
 #' @template seealso
 #' @export
-buildlme <- function (formula,data=NULL,random,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=TRUE,calc.summary=TRUE,...) {
+buildlme <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.anova=FALSE,calc.summary=TRUE,...) {
 	if (!requireNamespace('nlme',quietly=T)) stop('Please install package nlme')
 	p <- list(
 		formula=formula,
 		data=data,
 		family=gaussian(),
 		cluster=cl,
-		reduce.fixed=T,
-		reduce.random=F,
+		reduce.fixed=reduce.fixed,
+		reduce.random=reduce.random,
 		direction=direction,
 		crit=mkCrit(crit),
 		crit.name=mkCritName(crit),
@@ -409,9 +460,9 @@ buildlme <- function (formula,data=NULL,random,cl=NULL,direction=c('order','back
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=T,
+		can.use.reml=T,
 		env=parent.frame(),
-		dots=list(random=random,...)
+		dots=list(...)
 	)
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
@@ -425,14 +476,24 @@ buildlme <- function (formula,data=NULL,random,cl=NULL,direction=c('order','back
 #' @template reduce
 #' @template anova
 #' @template summary
-#' @param ddf The method used for calculating \emph{p}-values if \code{calc.anova=TRUE} or \code{calc.summary=TRUE}. Options are \code{'Wald'} (default), \code{'Satterthwaite'} (if package \code{lmerTest} is available), \code{'Kenward-Roger'} (if packages \code{lmerTest} and \code{pbkrtest} are available), and \code{'lme4'} (no \emph{p}-values)
+#' @param ddf The method used for calculating \emph{p}-values if \code{calc.anova=FALSE} or \code{calc.summary=TRUE}. Options are \code{'Wald'} (default), \code{'Satterthwaite'} (if package \code{lmerTest} is available), \code{'Kenward-Roger'} (if packages \code{lmerTest} and \code{pbkrtest} are available), and \code{'lme4'} (no \emph{p}-values)
 #' @param ... Additional options to be passed to \code{lmer}, \code{glmer}, or \code{gamm4}. (They will also be passed to \code{(g)lm} in so far as they're applicable, so you can use arguments like \code{subset=...} and expect things to work. The single exception is the \code{control} argument, which is assumed to be meant only for \code{lme4} and not for \code{(g)lm}, and will \emph{not} be passed on to \code{(g)lm}.)
 #' @examples
 #' library(buildmer)
 #' m <- buildmer(Reaction ~ Days + (Days|Subject),lme4::sleepstudy)
+#' 
+#' #tests from github issue #2:
+#' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
+#'            family=binomial,data=lme4::cbpp)
+#' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
+#'            family=binomial,data=lme4::cbpp,direction='forward')
+#' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
+#'            family=binomial,data=lme4::cbpp,crit='AIC')
+#' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
+#'            family=binomial,data=lme4::cbpp,direction='forward',crit='AIC')
 #' @importFrom stats gaussian
 #' @export
-buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.anova=TRUE,calc.summary=TRUE,ddf='Wald',...) {
+buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.anova=FALSE,calc.summary=TRUE,ddf='Wald',...) {
 	p <- list(
 		formula=formula,
 		data=data,
@@ -453,7 +514,7 @@ buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=is.gaussian(family),
+		can.use.reml=is.gaussian(family),
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -462,14 +523,13 @@ buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 }
 
 #' Use \code{buildmer} to perform stepwise elimination for \emph{the random-effects part} of \code{lmertree()} and \code{glmertree()} models from package \code{glmertree}
-#' @param formula Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and \code{lme4}-style random effects. In the latter case, the additional arguments \code{left} and \code{right} must be specified as one-sided formulas containing the fixed part of the model and the partitioning part, respectively
+#' @param formula Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and the fixed and random effects for the regression part. In the latter case, the additional argument \code{partitioning} must be specified as a one-sided formula containing the partitioning part of the model.
 #' @template data
 #' @template family
 #' @template common
+#' @template reduce
 #' @template summary
-#' @param left The left part of the \code{glmertree} formula, used if \code{formula} does not contain \code{glmertree}-specific terms. Note that if \code{left} is specified when \code{formula} is in \code{glmertree} format, \code{left} overrides the \code{formula} specification!
-#' @param right The right part of the \code{glmertree} formula, used if \code{formula} does not contain \code{glmertree}-specific terms. Note that if \code{right} is specified when \code{formula} is in \code{glmertree} format, \code{right} overrides the \code{formula} specification!
-#' @param ... Additional options to be passed to \code{lmertree} or \code{glmertree}
+#' @param ... Additional options to be passed to \code{lmertree} or \code{glmertree}. (They will also be passed to \code{(g)lmtree} in so far as they're applicable. The single exception is the \code{control} argument, which is assumed to be meant only for \code{(g)lmertree} and not for \code{(g)lmtree}, and will \emph{not} be passed on to \code{(g)lmtree}.)
 #' @examples
 #' library(buildmer)
 #' m <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,crit='LL',direction='order',
@@ -477,39 +537,42 @@ buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' m <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,crit='LL',direction='order',
 #'                   data=lme4::sleepstudy,family=Gamma(link=identity),joint=FALSE)
 #' @template seealso
+#' @details
+#' Note that the likelihood-ratio test is not available for \code{glmertree} models, as it cannot be assured that the models being compared are nested. The default is thus to use AIC.
+#' It is recommended to pass \code{joint=FALSE}, as this speeds up the fits (drastically so in the case of a generalized linear mixed model), and reduces the odds of the final \code{(g)lmer} model failing to converge or converging singularly.
 #' @importFrom stats gaussian
 #' @export
-buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction='order',crit='LL',include=NULL,calc.summary=TRUE,left=NULL,right=NULL,...) {
+buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='AIC',include=NULL,reduce.fixed=TRUE,reduce.random=TRUE,calc.summary=TRUE,...) {
 	if (!requireNamespace('glmertree',quietly=T)) stop('Please install package glmertree')
-	if (any( (is.character(crit) & crit == 'LRT') | (!is.character(crit) & isTRUE(all.equal(crit,crit.LRT))) )) stop("The likelihood-ratio test is not suitable for glmertree models, as there is no way to guarantee that two models being compared are nested. It is suggested to use only the raw log-likelihood instead (crit='LL') and only perform the term ordering step (direction='order'), but if you must use stepwise elimination, AIC may suit your needs instead of LRT.")
+	if (!requireNamespace('partykit',quietly=T)) stop('Please install package partykit')
+	if (any( (is.character(crit) & crit == 'LRT') | (!is.character(crit) & isTRUE(all.equal(crit,crit.LRT))) )) stop("The likelihood-ratio test is not suitable for glmertree models, as there is no way to guarantee that two models being compared are nested. It is suggested to use the raw log-likelihood instead (crit='LL') and only perform the term-ordering step (direction='order'). If you require stepwise elimination, information criteria such as AIC should be valid.")
 
-	if (is.null(c(left,right))) {
+	dots <- list(...)
+	if (is.null(dots$partitioning)) {
 		sane <- function (a,b) if (a != b) stop('Error: formula does not seem to be in glmertree format. Use the following format: dep ~ offset terms | random-effect terms | partitioning variables, where the random effects are specified in lme4 form, e.g. dep ~ a | (1|b) + (1|c) | d.')
 		sane(formula[[1]],'~')
 		dep <- formula[[2]]
 		terms <- formula[[3]]
 		sane(terms[[1]],'|')
-		right <- as.character(terms[3])
+		partitioning <- as.character(terms[3])
 		terms <- terms[[2]]
 		sane(terms[[1]],'|')
 		left <- as.character(terms[2])
-		if (is.null(lme4::findbars(terms[[3]]))) stop('Error: no random effects found in the middle block of the glmertree formula. Use the following format: dep ~ offset terms | random-effect terms | partitioning variables, where the random effects are specified in lme4 form, e.g. dep ~ a | (1|b) + (1|c) | d.')
 		middle <- as.character(terms[3])
-		formula <- stats::as.formula(paste0(dep,'~',paste0(middle,collapse='+')),env=parent.frame())
+		formula <- stats::as.formula(paste0(dep,'~',paste0(c(left,middle),collapse='+')),env=parent.frame())
 	} else {
-		left <- as.character(left[2])
-		right <- as.character(right[2])
+		partitioning <- as.character(dots$partitioning[2])
+		dots$partitioning <- NULL
 	}
 
 	p <- list(
 		formula=formula,
-		left=left,
-		right=right,
+		partitioning=partitioning,
 		data=data,
 		family=family,
 		cluster=cl,
-		reduce.fixed=F,
-		reduce.random=T,
+		reduce.fixed=reduce.fixed,
+		reduce.random=reduce.random,
 		direction=direction,
 		crit=mkCrit(crit),
 		crit.name=mkCritName(crit),
@@ -522,13 +585,14 @@ buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=if (is.gaussian(family)) substitute(lmer.control) else substitute(glmer.control),
-		can.use.REML=is.gaussian(family),
+		can.use.reml=F,
 		env=parent.frame(),
-		dots=list(...)
+		dots=dots
 	)
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
+
 #' Use \code{buildmer} to perform stepwise elimination for \code{multinom} models from package \code{nnet}
 #' @template formula
 #' @template data
@@ -563,7 +627,7 @@ buildmultinom <- function (formula,data=NULL,cl=NULL,direction=c('order','backwa
 		data.name=substitute(data),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
-		can.use.REML=F,
+		can.use.reml=F,
 		env=parent.frame(),
 		dots=list(...)
 	)

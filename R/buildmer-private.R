@@ -4,18 +4,16 @@ buildmer.fit <- function (p) {
 	if (is.data.frame(p$formula)) {
 		p$tab <- p$formula
 		if (is.null(p$dots$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
-		p$formula <- build.formula(p$dots$dep,p$tab,p$env)
+		p$dep <- p$dots$dep
+		p$formula <- build.formula(p$dep,p$tab,p$env)
 		p$dots$dep <- NULL
-	} else p$tab <- tabulate.formula(p$formula)
-	p$filtered.dots <- p$dots[names(p$dots) != 'control' & names(p$dots) %in% names(c(formals(stats::lm),formals(stats::glm)))]
-	if (is.null(p$cluster)) {
-		p$parallel <- F
-		p$parply <- lapply
 	} else {
-		p$parallel <- T
-		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
-		p$env <- .GlobalEnv
-		parallel::clusterExport(p$cluster,privates,environment())
+		p$dep <- as.character(p$formula[2])
+		p$tab <- tabulate.formula(p$formula)
+	}
+	if (!is.null(p$dots$REML) && p$can.use.reml) {
+		if (isFALSE(p$dots$REML)) p$can.use.reml <- F
+		p$dots$REML <- NULL
 	}
 	if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
 
@@ -26,7 +24,17 @@ buildmer.fit <- function (p) {
 		p$dots$p <- NULL
 	}
 
-	p$reml <- T
+	if (is.null(p$cluster)) {
+		p$parallel <- F
+		p$parply <- lapply
+	} else {
+		p$parallel <- T
+		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
+		p$env <- .GlobalEnv
+		#parallel::clusterExport(p$cluster,privates,environment())
+	}
+
+	p$reml <- p$can.use.reml
 	p$ordered <- ''
 	crits <- p$crit
 	if (length(crits) == 1) crits <- sapply(1:length(p$direction),function (i) crits)
@@ -98,7 +106,7 @@ has.smooth.terms <- function (formula) length(mgcv::interpret.gam(formula)$smoot
 is.gaussian <- function (family) {
 	if (is.character(family)) family <- get(family)
 	if (is.function (family)) family <- family()
-	isTRUE(all.equal(family,gaussian()))
+	family$family == 'gaussian' && family$link == 'identity'
 }
 is.smooth.term <- function (term) has.smooth.terms(mkForm(list(term)))
 is.random.term <- function (term) {
@@ -111,9 +119,9 @@ is.random.term <- function (term) {
 mkCrit <- function (crit) if (is.function(crit)) crit else get(paste0('crit.',crit))
 mkCritName <- function (crit) if (is.function(crit)) 'custom' else crit
 mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',crit))
-mkForm <- function (term) stats::as.formula(paste0('~',term))
+mkForm <- function (term,env=parent.frame()) stats::as.formula(paste0('~',term),env=env)
 mkTerm <- function (term) mkForm(term)[[2]]
-privates <- c('p','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.gamm4','patch.lm','patch.lmer','patch.mertree','run')
+privates <- c('p','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.GLMMadaptive','patch.gamm4','patch.lm','patch.lmer','patch.mertree','run')
 
 unpack.smooth.terms <- function (x) {
 	fm <- stats::as.formula(paste0('~',list(x)))
