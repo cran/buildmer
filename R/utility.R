@@ -10,7 +10,7 @@
 #' add.terms(form,c('many','more|terms','to|terms','(be|added)','to|test'))
 #' @export
 add.terms <- function (formula,add) {
-	dep <- as.character(formula[2])
+	dep <- if (length(formula) < 3) '' else as.character(formula[2])
 	terms <- terms(formula,keep.order=T)
 	intercept <- attr(terms,'intercept')
 	terms <- attr(terms,'term.labels')
@@ -86,12 +86,13 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 			terms <- terms[-1,]
 		} else {
 			ix <- terms[1,'index']
-			cur <- terms[!is.na(terms$index) & terms$index == ix,]
+			ii <- !is.na(terms$index) & terms$index == ix
+			cur <- terms[ii,]
 			termlist <- cur$term
 			if (!'1' %in% termlist) termlist <- c('0',termlist)
 			termlist <- paste0(termlist,collapse='+')
 			cur <- paste0('(',paste0(termlist,'|',unique(cur$grouping)),')')
-			terms <- terms[!is.na(terms$index) & terms$index != ix,]
+			terms <- terms[!ii,]
 		}
 		form <- add.terms(form,cur)
 	}
@@ -136,14 +137,59 @@ conv <- function (model,singular.ok=FALSE) {
 		if (!is.null(model$fit$convergence) && model$fit$convergence != 0) return(F)
 		if (!is.null(model$sdr$pdHess)) {
 			if (!model$sdr$pdHess) return(F)
-			ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
-			if (inherits(ev,'try-error') || (min(ev) < 10*.Machine$double.eps)) return(F)
+			if (sum(dim(model$sdr$cov.fixed))) {
+				ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
+				if (inherits(ev,'try-error') || (min(ev) < 10*.Machine$double.eps)) return(F)
+			}
 		}
 		return(T)
 	}
 	if (inherits(model,'nnet')) return(model$convergence == 0)
 	if (inherits(model,'MixMod')) return(model$converged)
 	T
+}
+
+#' Convert lme4 random-effect terms to mgcv 're' smooths
+#' @param formula The lme4 formula.
+#' @param data The data.
+#' @examples
+#' library(buildmer)
+#' re <- re2mgcv(temp ~ angle + (1|replicate) + (1|recipe),lme4::cake)
+#' model <- buildgam(re$formula,re$data,family=mgcv::scat)
+#' # note: the below does NOT work, as the dependent variable is looked up in the data by name!
+#' \dontshow{if (FALSE)}
+#' re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)
+#' @export
+re2mgcv <- function (formula,data) {
+	dep <- as.character(formula[[2]])
+	data <- data[!is.na(data[[dep]]),]
+	formula <- tabulate.formula(formula)
+	fixed <- is.na(formula$grouping)
+	random <- formula[!fixed,]
+	formula <- formula[fixed,]
+	org.names <- names(data)
+	for (g in unique(random$grouping)) {
+		if (!g %in% names(data)) stop('No factor named "',g,'" in your data')
+		data[[g]] <- factor(data[[g]])
+		tab <- random[random$grouping == g,]
+		tab$index <- tab$grouping <- NA
+		f <- build.formula(dep,tab)
+		terms <- model.matrix(f,data)
+		nms <- gsub('[():]','_',colnames(terms))
+		for (i in 1:ncol(terms)) {
+			if (all(terms[,i] == 1)) {
+				term <- paste0('s(',g,',bs="re")')
+			} else {
+				nm <- paste0(g,'_',nms[i])
+				if (nm %in% org.names) stop('Error: please remove/rename ',nm,' from your data!')
+				data[[nm]] <- terms[,i]
+				term <- paste0('s(',g,',by=',nm,',bs="re")')
+			}
+			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=F)
+		}			
+	}
+	formula <- build.formula(dep,formula)
+	list(formula=formula,data=data)
 }
 
 #' Remove terms from an lme4 formula
@@ -186,8 +232,7 @@ remove.terms <- function (formula,remove) {
 	marginality.ok <- function (remove,have) {
 		forbidden <- if (!all(have == '1')) '1' else NULL
 		for (x in have) {
-			if (has.smooth.terms(stats::as.formula(paste0('~',x)))) x <- paste(unpack.smooth.terms(x),collapse='*')
-			else x.star <- gsub(':','*',x) #replace any interaction by the star operator, which will cause as.formula() to pull in all lower-order terms necessary without any more work from us!
+			x.star <- if (has.smooth.terms(stats::as.formula(paste0('~',x)))) paste(unpack.smooth.terms(x),collapse='*') else gsub(':','*',x) #replace any interaction by the star operator, which will cause as.formula() to pull in all lower-order terms necessary without any more work from us!
 			partterms <- attr(terms(stats::as.formula(paste0('~',x.star))),'term.labels')
 			forbidden <- c(forbidden,partterms[partterms != x])
 		}

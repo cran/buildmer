@@ -1,6 +1,4 @@
 backward <- function (p) {
-	if (!(p$reduce.fixed || p$reduce.random)) return(p)
-
 	fit.references.parallel <- function (p) {
 		if (p$parallel) parallel::clusterExport(p$cl,'p',environment())
 		message('Fitting ML and REML reference models')
@@ -55,11 +53,7 @@ backward <- function (p) {
 		message('Testing terms')
 		results <- p$parply(unique(p$tab$block[!is.na(p$tab$block)]),function (b) {
 			i <- which(p$tab$block == b)
-			out <- list(val=rep(NA,length(i)))
-			if (!p$reduce.fixed  &&  is.na(p$tab[i,]$grouping)) return(out)
-			if (!p$reduce.random && !is.na(p$tab[i,]$grouping)) return(out)
-			if (!can.remove(p$tab,i)) return(out)
-			if (any(paste(p$tab[i,'term'],p$tab[i,]$grouping) %in% paste(p$include$term,p$include$grouping))) return(out)
+			if (!can.remove(p$tab,i) || any(paste(p$tab[i,'term'],p$tab[i,]$grouping) %in% paste(p$include$term,p$include$grouping))) return(list(val=rep(NA,length(i))))
 			p$reml <- p$can.use.reml && all(!is.na(p$tab[i,]$grouping))
 			m.cur <- if (p$reml) p$cur.reml else p$cur.ml
 			f.alt <- build.formula(p$dep,p$tab[-i,],p$env)
@@ -81,6 +75,7 @@ backward <- function (p) {
 		progrep <- p$tab
 		progrep$index <- progrep$code <- progrep$ok <- NULL
 		if (p$crit.name == 'LRT') progrep$LRT <- exp(results)
+		if (p$crit.name %in% c('deviance','devexp')) progrep[,p$crit.name] <- -progrep[,p$crit.name]
 		print(progrep)
 		remove <- p$elim(results)
 		remove <- which(!is.na(remove) & !is.nan(remove) & remove)
@@ -138,6 +133,7 @@ forward <- function (p) {
 	progrep <- p$tab
 	progrep$index <- progrep$code <- progrep$ok <- NULL
 	if (p$crit.name == 'LRT') progrep$score <- exp(progrep$score)
+	if (p$crit.name %in% c('deviance','devexp')) progrep[,p$crit.name] <- -progrep[,p$crit.name]
 	print(progrep)
 	remove <- p$elim(p$tab$score)
 	# Retain all terms up to the last significant one, even if they were not significant themselves
@@ -146,8 +142,6 @@ forward <- function (p) {
 	remove[1:length(keep)] <- F
 	remove.ok <- sapply(1:nrow(p$tab),function (i) {
 		if (is.na(p$tab[i,]$block)) return(F)
-		if (!p$reduce.fixed  &&  is.na(p$tab[i,]$grouping)) return(F)
-		if (!p$reduce.random && !is.na(p$tab[i,]$grouping)) return(F)
 		if (!can.remove(p$tab,i)) return(F)
 		T
 	})
@@ -184,19 +178,14 @@ order <- function (p) {
 					return(my)
 				}
 
-				# 3. Take out smooth terms if there were non-smooth terms. Parametric terms need to go first in case smooths need to be centered.
-				smooths <- sapply(my$term,is.smooth.term)
-				if (!all(smooths)) my$ok[smooths] <- F
-
-				# 4. Evaluate marginality. We cannot take the terms already in the formula into account, because that will break things like nesting.
+				# 3. Evaluate marginality. We cannot take the terms already in the formula into account, because that will break things like nesting.
 				# Thus, we have to define marginality as ok if there is no lower-order term whose components are a proper subset of the current term.
 				if (length(my[my$ok,'term']) > 1) {
 					all.components <- lapply(my[my$ok,'term'],function (x) {
 						x <- stats::as.formula(paste0('~',x))[[2]]
-						if (length(smooths) && all(smooths)) unpack.smooth.terms(x) else unravel(x)
+						if (is.smooth.term(x)) unpack.smooth.terms(x) else unravel(x)
 					})
 					check <- function (i) {
-						if (i %in% smooths && !all(smooths)) return(F) #see 3. above
 						test <- all.components[[i]]
 						for (x in all.components[-i]) { #walk all other terms' components
 							if (any(x == '1')) return(F) #intercept should always come first
@@ -209,7 +198,7 @@ order <- function (p) {
 				tab[mine,] <- my
 			}
 
-			# 5. If any term belonging to a single block could not be selected, disqualify the whole block
+			# 4. If any term belonging to a single block could not be selected, disqualify the whole block
 			tab <- plyr::ddply(tab,~block,within,{ if (!all(ok)) ok <- F })
 
 			tab
@@ -301,9 +290,8 @@ order <- function (p) {
 reduce.noconv <- function (p) {
 	message('Convergence failure. Reducing terms and retrying...')
 	cands <- p$tab$block[!is.na(p$tab$block)]
-	if (!length(cands)) {
-		message('No terms left for reduction, giving up')
-		return(p)
+	if (length(unique(cands)) < 2) {
+		stop('No terms left for reduction, giving up')
 	}
 	p$tab <- p$tab[!is.na(p$tab$block) & p$tab$block != cands[length(cands)],]
 	p$formula <- build.formula(p$dep,p$tab,p$env)

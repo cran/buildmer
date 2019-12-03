@@ -17,7 +17,8 @@
 mkBuildmer <- setClass('buildmer',slots=list(model='ANY',p='list',anova='ANY',summary='ANY'))
 
 #' @import methods
-#' @S3method show buildmer
+#' @method show buildmer
+#' @export
 show.buildmer <- function (object) {
 	methods::show(object@model)
 	if (length(object@p$messages)) {
@@ -27,7 +28,8 @@ show.buildmer <- function (object) {
 }
 setMethod('show','buildmer',show.buildmer)
 
-#' @S3method anova buildmer
+#' @method anova buildmer
+#' @export
 anova.buildmer <- function (object,...) try({
 	if (length(object@p$messages)) warning(object@p$messages)
 	dots <- list(...)
@@ -74,7 +76,8 @@ anova.buildmer <- function (object,...) try({
 	return(table)
 })
 
-#' @S3method summary buildmer
+#' @method summary buildmer
+#' @export
 summary.buildmer <- function (object,...) try({
 	if (length(object@p$messages)) warning(object@p$messages)
 	dots <- list(...)
@@ -124,9 +127,230 @@ setGeneric('diag')
 #' \donttest{m <- buildmer(terms,data=vowels,dep='f1')}
 #' @export
 setMethod('diag','formula',function (x) {
-	dep <- as.character(x[2])
+	dep <- if (length(x) < 3) '' else as.character(x[2])
 	tab <- tabulate.formula(x)
 	ok <- !is.na(tab$index)
 	tab$index[ok] <- 1:sum(ok)
 	build.formula(dep,tab)
 })
+
+#sapply(c('MixMod','bam','gam','glm','lm','glmmTMB','gls','JuliaCall','lme','nlme','lmerMod','glmerMod','lmerModLmerTest','lmertree','glmertree','lmtree','glmtree','multinom','nnet'),function (x) methods(class=x)) %>% unlist %>% sapply(. %>% strsplit('.',fixed=T) %>% .[[1]] %>% .[1:(length(.)-1)] %>% paste0(collapse='.')) %>% unique %>% .[!endsWith(.,'-method')] %>% .[!. %in% c('anova','summary','show')] %>% sapply(function (x) {
+#	forms <- names(formals(x))
+#	forms2 <- paste0(forms[-1],collapse=',')
+#	formsfull <- paste0(forms,collapse=',')
+#	cat("#' @method",x,'buildmer\n')
+#	cat("#' @export\n")
+#	cat(paste0(x,'.buildmer <- function(',formsfull,') ',x,'(',forms[1],'=',forms[1],'@model,',forms2,')\n'))
+#}) -> x
+#' @method coef buildmer
+#' @export
+coef.buildmer <- function (object,...) coef(object=object@model,...)
+#' @method confint buildmer
+#' @export
+confint.buildmer <- function (object,...) confint(object=object@model,...)
+#' @method family buildmer
+#' @export
+family.buildmer <- function (object,...) family(object=object@model,...)
+#' @method fitted buildmer
+#' @export
+fitted.buildmer <- function (object,...) fitted(object=object@model,...)
+#' @method fixef buildmer
+#' @importFrom nlme fixef
+#' @export
+fixef.buildmer <- function (object,...) fixef(object=object@model,...)
+#' @method formula buildmer
+#' @export
+formula.buildmer <- function (x,...) formula(x=x@model,...)
+#' @method logLik buildmer
+#' @export
+logLik.buildmer <- function (object,...) logLik(object=object@model,...)
+#' @method model.frame buildmer
+#' @export
+model.frame.buildmer <- function (formula,...) model.frame(formula=formula@model,...)
+#' @method model.matrix buildmer
+#' @export
+model.matrix.buildmer <- function (object,...) model.matrix(object=object@model,...)
+#' @method nobs buildmer
+#' @export
+nobs.buildmer <- function (object,...) nobs(object=object@model,...)
+#' @method predict buildmer
+#' @export
+predict.buildmer <- function (object,...) predict(object=object@model,...)
+#' @method print buildmer
+#' @export
+print.buildmer <- function (x,...) print(x=x@model,...)
+#' @method ranef buildmer
+#' @importFrom nlme ranef
+#' @export
+ranef.buildmer <- function (object,...) ranef(object=object@model,...)
+#' @method residuals buildmer
+#' @export
+residuals.buildmer <- function (object,...) residuals(object=object@model,...)
+#' @method simulate buildmer
+#' @export
+simulate.buildmer <- function (object,...) simulate(object=object@model,...)
+#' @method terms buildmer
+#' @export
+terms.buildmer <- function (x,...) terms(x=x@model,...)
+#' @method vcov buildmer
+#' @export
+vcov.buildmer <- function (object,...) vcov(object=object@model,...)
+#' @method cooks.distance buildmer
+#' @export
+cooks.distance.buildmer <- function (model,...) cooks.distance(model=model@model,...)
+#' @method influence buildmer
+#' @export
+influence.buildmer <- function (model,...) influence(model=model@model,...)
+#' @method plot buildmer
+#' @importFrom graphics plot
+#' @export
+plot.buildmer <- function (x,...) plot(x=x@model,...)
+#' @method add1 buildmer
+#' @export
+add1.buildmer <- function (object,...) add1(object=object@model,...)
+#' @method deviance buildmer
+#' @export
+deviance.buildmer <- function (object,...) deviance(object=object@model,...)
+#' @method drop1 buildmer
+#' @export
+drop1.buildmer <- function (object,...) drop1(object=object@model,...)
+#' @method effects buildmer
+#' @export
+effects.buildmer <- function (object,...) effects(object=object@model,...)
+#' @method extractAIC buildmer
+#' @export
+extractAIC.buildmer <- function (fit,...) extractAIC(fit=fit@model,...)
+#' @method profile buildmer
+#' @export
+profile.buildmer <- function (fitted,...) profile(fitted=fitted@model,...)
+#' @method rstandard buildmer
+#' @export
+rstandard.buildmer <- function (model,...) rstandard(model=model@model,...)
+#' @method rstudent buildmer
+#' @export
+rstudent.buildmer <- function (model,...) rstudent(model=model@model,...)
+#' @method weights buildmer
+#' @export
+weights.buildmer <- function (object,...) weights(object=object@model,...)
+#' @import stats
+#' @method alias buildmer
+#' @export
+alias.buildmer <- function (object,...) alias(object=object@model,...)
+#' @import stats
+#' @method case.names buildmer
+#' @export
+case.names.buildmer <- function (object,...) case.names(object=object@model,...)
+#' @import stats
+#' @method dfbeta buildmer
+#' @export
+dfbeta.buildmer <- function (model,...) dfbeta(model=model@model,...)
+#' @import stats
+#' @method dfbetas buildmer
+#' @export
+dfbetas.buildmer <- function (model,...) dfbetas(model=model@model,...)
+#' @import stats
+#' @method dummy.coef buildmer
+#' @export
+dummy.coef.buildmer <- function (object,...) dummy.coef(object=object@model,...)
+#' @import stats
+#' @method hatvalues buildmer
+#' @export
+hatvalues.buildmer <- function (model,...) hatvalues(model=model@model,...)
+#' @import stats
+#' @method kappa buildmer
+#' @export
+kappa.buildmer <- function (z,...) kappa(z=z@model,...)
+#' @import stats
+#' @method labels buildmer
+#' @export
+labels.buildmer <- function (object,...) labels(object=object@model,...)
+#' @import stats
+#' @method proj buildmer
+#' @export
+proj.buildmer <- function (object,...) proj(object=object@model,...)
+#' @import stats
+#' @method qqnorm buildmer
+#' @export
+qqnorm.buildmer <- function (y,...) qqnorm(y=y@model,...)
+#' @import stats
+#' @method qr buildmer
+#' @export
+qr.buildmer <- function (x,...) qr(x=x@model,...)
+#' @import stats
+#' @method variable.names buildmer
+#' @export
+variable.names.buildmer <- function (object,...) variable.names(object=object@model,...)
+#' @import stats
+#' @method df.residual buildmer
+#' @export
+df.residual.buildmer <- function (object,...) df.residual(object=object@model,...)
+#' @import stats
+#' @method sigma buildmer
+#' @export
+sigma.buildmer <- function (object,...) sigma(object=object@model,...)
+#' @method VarCorr buildmer
+#' @importFrom nlme VarCorr
+#' @export
+VarCorr.buildmer <- function (x,...) VarCorr(x=x@model,...)
+#' @method ACF buildmer
+#' @importFrom nlme ACF
+#' @export
+ACF.buildmer <- function (object,...) ACF(object=object@model,...)
+#' @method augPred buildmer
+#' @importFrom nlme augPred
+#' @export
+augPred.buildmer <- function (object,...) augPred(object=object@model,...)
+#' @method comparePred buildmer
+#' @importFrom nlme comparePred
+#' @export
+comparePred.buildmer <- function (object1,...) comparePred(object1=object1@model,...)
+#' @method getData buildmer
+#' @importFrom nlme getData
+#' @export
+getData.buildmer <- function (object) getData(object=object@model)
+#' @method getGroups buildmer
+#' @importFrom nlme getGroups
+#' @export
+getGroups.buildmer <- function (object,form,level,data,sep) getGroups(object=object@model,form,level,data,sep)
+#' @method getGroupsFormula buildmer
+#' @importFrom nlme getGroupsFormula
+#' @export
+getGroupsFormula.buildmer <- function (object,asList,sep) getGroupsFormula(object=object@model,asList,sep)
+#' @method getResponse buildmer
+#' @importFrom nlme getResponse
+#' @export
+getResponse.buildmer <- function (object,form) getResponse(object=object@model,form)
+#' @method getVarCov buildmer
+#' @importFrom nlme getVarCov
+#' @export
+getVarCov.buildmer <- function (obj,...) getVarCov(obj=obj@model,...)
+#' @method intervals buildmer
+#' @importFrom nlme intervals
+#' @export
+intervals.buildmer <- function (object,...) intervals(object=object@model,...)
+#' @method update buildmer
+#' @export
+update.buildmer <- function (object,...) update(object=object@model,...)
+#' @method Variogram buildmer
+#' @importFrom nlme Variogram
+#' @export
+Variogram.buildmer <- function (object,...) Variogram(object=object@model,...)
+#' @method pairs buildmer
+#' @importFrom graphics pairs
+#' @export
+pairs.buildmer <- function (x,...) pairs(x=x@model,...)
+#' @method step buildmer
+#' @export
+step.buildmer <- function (object,...) step(object=object@model,...)
+#' @method getME buildmer
+#' @importFrom lme4 getME
+#' @export
+getME.buildmer <- function (object,...) getME(object=object@model,...)
+#' @method isLMM buildmer
+#' @importFrom lme4 isLMM
+#' @export
+isLMM.buildmer <- function (x,...) isLMM(x=x@model,...)
+#' @method refit buildmer
+#' @importFrom lme4 refit
+#' @export
+refit.buildmer <- function (object,...) refit(object=object@model,...)

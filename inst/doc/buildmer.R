@@ -1,22 +1,22 @@
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 library(buildmer)
 head(vowels)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 f <- f1 ~ vowel*timepoint*following * neighborhood*information*stress + 
 	 (vowel*timepoint*following * neighborhood+information+stress | participant) +
 	 (timepoint | word)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 f <- f1 ~ vowel*timepoint*following +
 	 (vowel*timepoint*following | participant) +
 	 (timepoint | word)
 
-## ----eval=F--------------------------------------------------------------
+## ----eval=F-------------------------------------------------------------------
 #  library(lme4)
 #  m <- buildmer(f,data=vowels,direction='order',control=lmerControl(optimizer='bobyqa'))
 
-## ----echo=F--------------------------------------------------------------
+## ----echo=F-------------------------------------------------------------------
 cat('Determining predictor order
 Currently evaluating LRT for: vowel, timepoint, following
 Fitting as (g)lm: f1 ~ vowel
@@ -34,18 +34,18 @@ Fitting via lme4, with REML: f1 ~ following + vowel + timepoint + vowel:timepoin
 boundary (singular) fit: see ?isSingular
 None of the models converged - giving up ordering attempt.')
 
-## ----include=F-----------------------------------------------------------
+## ----include=F----------------------------------------------------------------
 library(lme4)
 #hack for consistency with actual output without actually fitting the model every time I change something in the vignette
 m <- buildmer:::mkBuildmer(model=list(formula=(function () as.formula('f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + following:vowel + following:vowel:timepoint + (1 + timepoint + following + timepoint:following | participant) + (1 + timepoint | word)',.GlobalEnv))()))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 (f <- formula(m@model))
 
-## ----eval=F--------------------------------------------------------------
+## ----eval=F-------------------------------------------------------------------
 #  m <- buildmer(f,data=vowels,direction='backward',control=lmerControl(optimizer='bobyqa'))
 
-## ----echo=F--------------------------------------------------------------
+## ----echo=F-------------------------------------------------------------------
 cat('Fitting ML and REML reference models
 Fitting with REML: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + following:vowel + following:vowel:timepoint + (1 + timepoint | word) + (1 + timepoint + following + timepoint:following | participant)
 Fitting with ML: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + following:vowel + following:vowel:timepoint + (1 + timepoint | word) + (1 + timepoint + following + timepoint:following | participant)
@@ -89,25 +89,25 @@ Fitting ML and REML reference models
 All terms are significant
 Finalizing by converting the model to lmerTest')
 
-## ----echo=F,message=F----------------------------------------------------
+## ----echo=F,message=F---------------------------------------------------------
 f2 <- as.formula('f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + (1 + timepoint | word) + (1 + timepoint + following + timepoint:following | participant)',.GlobalEnv)
 m <- buildmer(f2,vowels,direction=NULL,control=lmerControl(optimizer='bobyqa'))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 summary(m)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 tabulate.formula(f)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 vowels <- cbind(vowels,model.matrix(~vowel,vowels))
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following + 
 	     ((vowel1+vowel2+vowel3+vowel4)*timepoint*following | participant) +
 	     (timepoint | word))
 terms <- tabulate.formula(form,group='vowel[^:]')
 
-## ----eval=F--------------------------------------------------------------
+## ----eval=F-------------------------------------------------------------------
 #  m <- buildmer(terms,data=vowels,dep='f1',control=lmerControl(optimizer='bobyqa'))
 

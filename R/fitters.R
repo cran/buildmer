@@ -9,7 +9,14 @@ fit.GLMMadaptive <- function (p,formula) {
 }
 
 fit.bam <- function (p,formula) {
-	if (length(attr(stats::terms(formula),'term.labels')) == 0) return(fit.buildmer(p,formula)) #bam is unable to fit intercept-only models
+	re <- re2mgcv(formula,p$data)
+	formula <- re$formula
+	p$data <- re$data
+	if (length(attr(stats::terms(formula),'term.labels')) == 0) {
+		# bam is unable to fit intercept-only models
+		formula <- add.terms(formula,c('intercept'))
+		p$data$intercept <- 1
+	}
 	method <- if (p$reml) 'fREML' else 'ML'
 	message(paste0('Fitting via bam, with ',method,': ',as.character(list(formula))))
 	patch.lm(p,mgcv::bam,c(list(formula=formula,family=p$family,data=p$data,method=method),p$dots))
@@ -17,29 +24,20 @@ fit.bam <- function (p,formula) {
 
 fit.buildmer <- function (p,formula) {
 	reml <- p$reml && is.gaussian(p$family)
-	if (has.smooth.terms(formula)) {
-		fixed <- lme4::nobars(formula)
-		bars <- lme4::findbars(formula)
-		random <- if (length(bars)) mkForm(paste('(',sapply(bars,function (x) as.character(list(x))),')',collapse=' + '),p$env) else NULL
-		if (!requireNamespace('gamm4',quietly=T)) stop('A smooth term was detected. Please install the gamm4 package to fit this model, or alternatively use buildgam() or buildbam().')
-		message(paste0('Fitting via gamm4, with ',ifelse(reml,'REML','ML'),': ',as.character(list(fixed)),', random=',as.character(list(random))))
-		model <- patch.gamm4(p,gamm4::gamm4,c(list(formula=fixed,random=random,family=p$family,data=p$data,REML=reml),p$dots))
-		return(if (inherits(model,'try-error')) model else model$mer)
-	}
 	if (is.null(lme4::findbars(formula))) {
-		p$dots <- p$dots[names(p$dots) %in% names(c(formals(stats::lm),formals(stats::glm)))]
 		p$dots$control <- NULL
 		if (reml) {
-			message(paste0('Fitting via gls (because REML was requested): ',as.character(list(formula))))
-			patch.lm(p,nlme::gls,c(list(model=formula,data=p$data,method='REML'),p$dots))
+			p$dots <- p$dots[names(p$dots) %in% names(formals(nlme::gls))]
+			return(fit.gls(p,formula))
+		}
+		if (is.gaussian(p$family)) {
+			p$dots <- p$dots[names(p$dots) %in% names(formals(stats::lm))]
+			message(paste0('Fitting via lm: ',as.character(list(formula))))
+			patch.lm(p,stats::lm,c(list(formula=formula,data=p$data),p$dots))
 		} else {
-			if (is.gaussian(p$family)) {
-				message(paste0('Fitting via lm: ',as.character(list(formula))))
-				patch.lm(p,stats::lm,c(list(formula=formula,data=p$data),p$dots))
-			} else {
-				message(paste0('Fitting via glm: ',as.character(list(formula))))
-				patch.lm(p,stats::glm,c(list(formula=formula,family=p$family,data=p$data),p$dots))
-			}
+			p$dots <- p$dots[names(p$dots) %in% names(formals(stats::glm))]
+			message(paste0('Fitting via glm: ',as.character(list(formula))))
+			patch.lm(p,stats::glm,c(list(formula=formula,family=p$family,data=p$data),p$dots))
 		}
 	} else {
 		if (is.gaussian(p$family)) {
@@ -53,12 +51,96 @@ fit.buildmer <- function (p,formula) {
 }
 
 fit.gam <- function (p,formula) {
+	re <- re2mgcv(formula,p$data)
+	formula <- re$formula
+	p$data <- re$data
+	if (length(attr(stats::terms(formula),'term.labels')) == 0) {
+		# gam is sometimes unable to fit intercept-only models
+		formula <- add.terms(formula,c('intercept'))
+		p$data$intercept <- 1
+	}
+	if (p$quickstart > 0) {
+		data <- p$data
+		method <- if (p$reml || p$quickstart > 1) 'fREML' else 'ML'
+		dots <- p$dots[names(p$dots) %in% names(formals(mgcv::bam))]
+		if (method == 'fREML' && p$quickstart > 2 && !'discrete' %in% names(dots)) dots$discrete <- T
+		if (p$quickstart > 3) {
+			samfrac <- p$quickstart - floor(p$quickstart)
+			if (samfrac == 0) samfrac <- .1
+			n <- nrow(data)
+			data <- data[sample.int(n,n*samfrac),]
+		}
+		if (p$quickstart > 4) dots$control <- c(p$dots$control,list(epsilon=.02))
+		message(paste0('Quickstart fit with bam/',method,': ',as.character(list(formula))))
+		qs <- patch.lm(p,mgcv::bam,c(list(formula=formula,family=p$family,data=data,method=method),dots))
+		if (!inherits(qs,'try-error')) {
+			p$dots$in.out <- list(sp=unname(qs$sp),scale=qs$sig2)
+			if (startsWith(qs$family$family,'Scaled t')) {
+				if (utils::packageVersion('mgcv') < '1.8.32') {
+					message(paste0('Starting values: ',paste0(p$dots$in.out$sp,collapse=' '),', excluding scaled-t theta values as mgcv version < 1.8.32'))
+				} else {
+					# set up starting values for theta
+					th.notrans <- qs$family$getTheta(F)
+					th.trans   <- qs$family$getTheta(T)
+					# transformation undoes the logarithm and then adds min.df to the df, so:
+					min.df <- th.trans[1] - exp(th.notrans[1])
+					message(paste0('Starting values: ',paste0(p$dots$in.out$sp,collapse=' '),' with theta values ',paste0(th.trans,collapse=' '),' and min.df ',min.df))
+					p$family <- mgcv::scat(theta=-th.trans,link=qs$family$link,min.df=min.df)
+				}
+			} else {
+				message(paste0('Starting values: ',paste0(p$dots$in.out$sp,collapse=' '),' with scale parameter ',p$dots$in.out$scale))
+			}
+		}
+	}
 	method <- if (p$reml) 'REML' else 'ML'
+	p$dots <- p$dots[names(p$dots) %in% names(formals(mgcv::gam))]
 	message(paste0('Fitting via gam, with ',method,': ',as.character(list(formula))))
 	patch.lm(p,mgcv::gam,c(list(formula=formula,family=p$family,data=p$data,method=method),p$dots))
 }
 
+fit.gamm <- function (p,formula) {
+	fixed <- lme4::nobars(formula)
+	bars <- lme4::findbars(formula)
+	if (is.null(bars)) {
+		if (!has.smooth.terms(formula)) {
+			p$dots <- p$dots[names(p$dots) %in% names(formals(mgcv::gam))]
+			p$quickstart <- 0
+			return(fit.gam(p,formula))
+		}
+		random <- NULL
+	} else {
+		random <- lapply(bars,function (x) mkForm(as.character(x[2]),p$env))
+		names(random) <- sapply(bars,function (x) as.character(x[[3]]))
+	}
+	method <- if (p$reml) 'REML' else 'ML'
+	message(paste0('Fitting via gamm, with ',method,': ',as.character(list(fixed)),', random=',as.character(list(random))))
+	m <- patch.lm(p,mgcv::gamm,c(list(formula=fixed,random=random,family=p$family,data=p$data,method=method),p$dots))
+	if (inherits(m,'try-error') || p$finalize) m else m$lme
+}
+
+fit.gamm4 <- function (p,formula) {
+	reml <- p$reml && is.gaussian(p$family)
+	fixed <- lme4::nobars(formula)
+	bars <- lme4::findbars(formula)
+	random <- if (length(bars)) mkForm(paste('(',sapply(bars,function (x) as.character(list(x))),')',collapse=' + '),p$env) else NULL
+	if (is.null(random) && !has.smooth.terms(formula)) return(fit.buildmer(p,formula))
+	message(paste0('Fitting via gamm4, with ',ifelse(reml,'REML','ML'),': ',as.character(list(fixed)),', random=',as.character(list(random))))
+	model <- patch.gamm4(p,gamm4::gamm4,c(list(formula=fixed,random=random,family=p$family,data=p$data,REML=reml),p$dots))
+	if (inherits(model,'try-error') || p$finalize) model else model$mer
+}
+
 fit.glmmTMB <- function (p,formula) {
+	if (p$reml && is.null(lme4::findbars(formula))) {
+		# work around bug in glmmTMB: REML only works if at least one non-f.e. parameter is specified
+		family <- p$family
+		if (is.character(family)) family <- get(family)
+		if (is.function (family)) family <- family()
+		if (family$family %in% c('poisson','binomial')) {
+			p$dots$control <- NULL
+			p$quickstart <- 0
+			return(fit.gam(p,formula))
+		}
+	}
 	message(paste0('Fitting via glmmTMB, with ',ifelse(p$reml,'REML','ML'),': ',as.character(list(formula))))
 	patch.lm(p,glmmTMB::glmmTMB,c(list(formula=formula,data=p$data,family=p$family,REML=p$reml),p$dots))
 }
@@ -66,6 +148,20 @@ fit.glmmTMB <- function (p,formula) {
 fit.gls <- function (p,formula) {
 	method <- if (p$reml) 'REML' else 'ML'
 	message(paste0('Fitting via gls, with ',method,': ',as.character(list(formula))))
+	# gls cannot handle rank-deficient fixed effects --- work around the problem
+	dep <- as.character(formula[[2]])
+	y <- p$data[[dep]]
+	y <- y[!is.na(y)]
+	X <- model.matrix(formula,p$data)
+	newform <- y ~ 0+X
+	environment(newform) <- NULL
+	newdata <- list(y=y,X=X)
+	na <- is.na(coef(lm(newform,newdata)))
+	if (ndrop <- sum(na)) {
+		message('gls model is rank-deficient, so dropping ',ndrop,if (ndrop > 1) ' columns/coefficients' else ' column/coefficient','. If this is the final model, the resulting summary may look a bit strange.')
+		newdata$X <- newdata$X[,!na]
+		return(patch.lm(p,nlme::gls,c(list(newform,data=newdata,method=method),p$dots)))
+	}
 	patch.lm(p,nlme::gls,c(list(formula,data=p$data,method=method),p$dots))
 }
 

@@ -1,5 +1,3 @@
-abort.PQL <- function (p) if (!is.gaussian(p$family) && ('I_KNOW_WHAT_I_AM_DOING' %in% p$dots || !isTRUE(p$I_KNOW_WHAT_I_AM_DOING))) stop('You are attempting to fit a non-Gaussian model using buildgam() or buildbam(). For non-Gaussian errors, bam() and gam() use PQL, so likelihood-based model comparisons are not valid! It is recommended to use gamm4() instead, or if this is not possible, to directly fit the full model and use the argument select=TRUE to perform term elimination. If you really know what you are doing, pass I_KNOW_WHAT_I_AM_DOING to your buildgam()/buildbam() invocation to sidestep this error.') else within.list(p,{ dots$I_KNOW_WHAT_I_AM_DOING <- NULL })
-
 buildmer.fit <- function (p) {
 	if (is.data.frame(p$formula)) {
 		p$tab <- p$formula
@@ -11,7 +9,7 @@ buildmer.fit <- function (p) {
 		p$dep <- as.character(p$formula[2])
 		p$tab <- tabulate.formula(p$formula)
 	}
-	if (!is.null(p$dots$REML) && p$can.use.reml) {
+	if (!is.null(p$dots$REML)) {
 		if (isFALSE(p$dots$REML)) p$can.use.reml <- F
 		p$dots$REML <- NULL
 	}
@@ -23,6 +21,14 @@ buildmer.fit <- function (p) {
 		p <- c(p,p$dots$p)
 		p$dots$p <- NULL
 	}
+	for (x in c('reduce.fixed','reduce.random')) {
+		p[[x]] <- T
+		if (x %in% names(p$dots)) {
+			p[[x]] <- p$dots[[x]]
+			p$dots[[x]] <- NULL
+			message(paste0("Warning: argument '",x,"' is deprecated; use 'include' instead."))
+		}
+	}
 
 	if (is.null(p$cluster)) {
 		p$parallel <- F
@@ -31,7 +37,7 @@ buildmer.fit <- function (p) {
 		p$parallel <- T
 		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
 		p$env <- .GlobalEnv
-		#parallel::clusterExport(p$cluster,privates,environment())
+		parallel::clusterExport(p$cluster,privates,environment())
 	}
 
 	p$reml <- p$can.use.reml
@@ -43,22 +49,14 @@ buildmer.fit <- function (p) {
 		if (length(p$direction)) for (i in 1:length(p$direction)) p <- do.call(p$direction[i],list(p=within.list(p,{ crit <- crits[[i]] })))
 		if ('LRT' %in% p$crit.name && 'LRT' %in% names(p$results)) p$results$LRT <- exp(p$results$LRT)
 	}
-	p
-}
-
-buildmer.finalize <- function (p) {
 	if (is.null(p$model)) {
 		message('Fitting the final model')
 		p$model <- p$parply(list(p),p$fit,p$formula)[[1]]
 	}
-	if (inherits(p$model,'lmerMod') && requireNamespace('lmerTest',quietly=T)) {
-		# Even if the user did not request lmerTest ddf, convert the model to an lmerTest object anyway in case the user is like me and only thinks about the ddf after having fitted the model
-		message('Finalizing by converting the model to lmerTest')
-		p$model@call$data <- p$data
-		if ('subset' %in% names(p$dots)) p$model@call$subset <- p$dots$subset
-		if ('control' %in% names(p$dots)) p$model@call$control <- p$dots$control
-		p$model <- patch.lmer(p,lmerTest::as_lmerModLmerTest,list(p$model))
-	}
+	p
+}
+
+buildmer.finalize <- function (p) {
 	ret <- mkBuildmer(model=p$model,p=p)
 	ret@p$in.buildmer <- T
 	if (p$calc.anova) ret@anova <- anova.buildmer(ret,ddf=p$ddf)
@@ -121,7 +119,7 @@ mkCritName <- function (crit) if (is.function(crit)) 'custom' else crit
 mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',crit))
 mkForm <- function (term,env=parent.frame()) stats::as.formula(paste0('~',term),env=env)
 mkTerm <- function (term) mkForm(term)[[2]]
-privates <- c('p','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.GLMMadaptive','patch.gamm4','patch.lm','patch.lmer','patch.mertree','run')
+privates <- c('p','build.formula','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.gamm4','patch.lm','patch.lmer','patch.mertree','re2mgcv','run','tabulate.formula')
 
 unpack.smooth.terms <- function (x) {
 	fm <- stats::as.formula(paste0('~',list(x)))
