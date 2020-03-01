@@ -1,9 +1,9 @@
 backward <- function (p) {
 	fit.references.parallel <- function (p) {
 		if (p$parallel) parallel::clusterExport(p$cl,'p',environment())
-		message('Fitting ML and REML reference models')
+		progress('Fitting ML and REML reference models')
 		repeat {
-			res <- p$parply(c(T,F),function (x) {
+			res <- p$parply(c(TRUE,FALSE),function (x) {
 				p$reml <- x
 				p$fit(p,p$formula)
 			})
@@ -26,8 +26,8 @@ backward <- function (p) {
 		}))
 		if (need.reml && is.null(p$cur.ml) && is.null(p$cur.reml)) p <- fit.references.parallel(p)
 		if (is.null(p$cur.ml)) {
-			message('Fitting ML reference model')
-			p$reml <- F
+			progress('Fitting ML reference model')
+			p$reml <- FALSE
 			p$cur.ml <- p$fit(p,p$formula)
 			if (!conv(p$cur.ml)) {
 				p <- reduce.noconv(p)
@@ -36,8 +36,8 @@ backward <- function (p) {
 			}
 		}
 		if (need.reml && is.null(p$cur.reml)) {
-			message('Fitting REML reference model')
-			p$reml <- T
+			progress('Fitting REML reference model')
+			p$reml <- TRUE
 			p$cur.reml <- p$fit(p,p$formula)
 			if (!conv(p$cur.reml)) {
 				p <- reduce.noconv(p)
@@ -47,19 +47,18 @@ backward <- function (p) {
 		}
 
 		if (!nrow(p$tab)) {
-			message("There's nothing left!")
+			progress("There's nothing left!")
 			return(p)
 		}
-		message('Testing terms')
+		progress('Testing terms')
 		results <- p$parply(unique(p$tab$block[!is.na(p$tab$block)]),function (b) {
 			i <- which(p$tab$block == b)
 			if (!can.remove(p$tab,i) || any(paste(p$tab[i,'term'],p$tab[i,]$grouping) %in% paste(p$include$term,p$include$grouping))) return(list(val=rep(NA,length(i))))
-			p$reml <- p$can.use.reml && all(!is.na(p$tab[i,]$grouping))
-			m.cur <- if (p$reml) p$cur.reml else p$cur.ml
+			p$reml <- all(!is.na(p$tab[i,]$grouping))
+			m.cur <- if (need.reml && p$reml) p$cur.reml else p$cur.ml
 			f.alt <- build.formula(p$dep,p$tab[-i,],p$env)
 			m.alt <- p$fit(p,f.alt)
-			val <- if (conv(m.alt)) p$crit(m.alt,m.cur) else NaN
-			if (p$crit.name == 'LRT' && p$reml) val <- val - log(2) #divide by 2 per Pinheiro & Bates 2000; remember that we are on the log scale
+			val <- if (conv(m.alt)) p$crit(p,m.alt,m.cur) else NaN
 			val <- rep(val,length(i))
 			list(val=val,model=m.alt)
 		})
@@ -74,13 +73,13 @@ backward <- function (p) {
 		}
 		progrep <- p$tab
 		progrep$index <- progrep$code <- progrep$ok <- NULL
-		if (p$crit.name == 'LRT') progrep$LRT <- exp(results)
+		if (p$crit.name %in% c('LRT','LRT2')) progrep[,p$crit.name] <- exp(results)
 		if (p$crit.name %in% c('deviance','devexp')) progrep[,p$crit.name] <- -progrep[,p$crit.name]
 		print(progrep)
 		remove <- p$elim(results)
 		remove <- which(!is.na(remove) & !is.nan(remove) & remove)
 		if (length(remove) == 0) {
-			message('All terms are significant')
+			progress('All terms are significant')
 			p$model <- if (need.reml) p$cur.reml else p$cur.ml
 			return(p)
 		}
@@ -94,7 +93,7 @@ backward <- function (p) {
 			# Recycle the current model as the next reference model
 			p[[ifelse(p$reml,'cur.reml','cur.ml')]] <- results[[remove]]$model
 		}
-		message('Updating formula: ',as.character(list(p$formula)))
+		progress('Updating formula: ',p$formula)
 	}
 }
 
@@ -107,13 +106,13 @@ can.remove <- function (tab,i) {
 
 	if ('1' %in% t) {
 		# If fixed intercept: never remove it
-		if (any(is.na(g))) return(F)
+		if (any(is.na(g))) return(FALSE)
 		# If random intercept: do not remove if there are subsequent terms
-		for (x in g) if (x %in% tab[-c(fx,i),'grouping']) return(F)
+		for (x in g) if (x %in% tab[-c(fx,i),'grouping']) return(FALSE)
 	}
 
 	# Do not remove fixed effects that have corresponding random effects
-	if (any(tfx %in% tab$term[-fx])) return(F)
+	if (any(tfx %in% tab$term[-fx])) return(FALSE)
 
 	for (x in g) {
 		# Do not remove effects participating in interactions
@@ -121,29 +120,33 @@ can.remove <- function (tab,i) {
 		scope <- scope[!scope %in% i]
 		for (t in tab[i,'term']) {
 			t <- unravel2(t)
-			if (any(sapply(tab[scope,'term'],function (x) all(t %in% unravel2(x))))) return(F)
+			if (any(sapply(tab[scope,'term'],function (x) all(t %in% unravel2(x))))) return(FALSE)
 		}
 	}
 
-	T
+	TRUE
 }
 
 forward <- function (p) {
-	if (p$ordered != p$crit.name) p <- order(p) else if (p$ordered == 'custom') warning("Assuming, but not checking, that direction='order' had used the same elimination criterion as requested for forward stepwise. If this is not the case, add an explicit 'order' step before the 'forward' step using the desired criterion.")
+	if (p$ordered != p$crit.name) {
+		p <- order(p)
+	} else if (p$ordered == 'custom') {
+		warning("Assuming, but not checking, that direction='order' had used the same elimination criterion as requested for forward stepwise. If this is not the case, add an explicit 'order' step before the 'forward' step using the desired criterion.")
+	}
 	progrep <- p$tab
 	progrep$index <- progrep$code <- progrep$ok <- NULL
-	if (p$crit.name == 'LRT') progrep$score <- exp(progrep$score)
+	if (p$crit.name %in% c('LRT','LRT2')) progrep$score <- exp(progrep$score)
 	if (p$crit.name %in% c('deviance','devexp')) progrep[,p$crit.name] <- -progrep[,p$crit.name]
 	print(progrep)
 	remove <- p$elim(p$tab$score)
 	# Retain all terms up to the last significant one, even if they were not significant themselves
 	# This happens if they hade a smallest crit in the order step, but would still be subject to elimination by the elimination function
 	keep <- which(!remove)
-	remove[1:length(keep)] <- F
+	remove[1:length(keep)] <- FALSE
 	remove.ok <- sapply(1:nrow(p$tab),function (i) {
-		if (is.na(p$tab[i,]$block)) return(F)
-		if (!can.remove(p$tab,i)) return(F)
-		T
+		if (is.na(p$tab[i,]$block)) return(FALSE)
+		if (!can.remove(p$tab,i)) return(FALSE)
+		TRUE
 	})
 	p$tab[,p$crit.name] <- p$tab$score
 	p$results <- p$tab
@@ -159,7 +162,7 @@ order <- function (p) {
 		# Test for marginality
 		can.eval <- function (tab) {
 			# 0. Initialize
-			tab$ok <- T
+			tab$ok <- TRUE
 			# 1. If there are random effects, evaluate them as a group
 			mine <- is.na(tab$grouping)
 			my <- tab[mine,]
@@ -188,10 +191,10 @@ order <- function (p) {
 					check <- function (i) {
 						test <- all.components[[i]]
 						for (x in all.components[-i]) { #walk all other terms' components
-							if (any(x == '1')) return(F) #intercept should always come first
-							if (all(x %in% test)) return(F)
+							if (any(x == '1')) return(FALSE) #intercept should always come first
+							if (all(x %in% test)) return(FALSE)
 						}
-						T
+						TRUE
 					}
 					my[my$ok,'ok'] <- sapply(1:length(all.components),check)
 				}
@@ -199,7 +202,7 @@ order <- function (p) {
 			}
 
 			# 4. If any term belonging to a single block could not be selected, disqualify the whole block
-			tab <- plyr::ddply(tab,~block,within,{ if (!all(ok)) ok <- F })
+			tab <- plyr::ddply(tab,~block,within,{ if (!all(ok)) ok <- FALSE })
 
 			tab
 		}
@@ -222,12 +225,12 @@ order <- function (p) {
 			check <- can.eval(check)
 			check <- check[check$ok,]
 			if (!nrow(check)) {
-				message('Could not proceed ordering terms')
+				progress('Could not proceed ordering terms')
 				p$tab <- have
 				p$model <- cur
 				return(p)
 			}
-			message(paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
+			progress(paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
 			if (p$parallel) parallel::clusterExport(p$cluster,c('check','have','p'),environment())
 			mods <- p$parply(unique(check$block),function (b) {
 				check <- check[check$block == b,]
@@ -236,12 +239,11 @@ order <- function (p) {
 				mod <- list(p$fit(p,form))
 				rep(mod,nrow(check))
 			})
-			mods <- unlist(mods,recursive=F)
-			check$score <- sapply(mods,function (mod) if (conv(mod)) p$crit(cur,mod) else NaN)
-			if (p$crit.name == 'LRT' && p$reml) check$score <- check$score - log(2) #divide by 2 per Pinheiro & Bates 2000; remember that we are on the log scale
+			mods <- unlist(mods,recursive=FALSE)
+			check$score <- sapply(mods,function (mod) if (conv(mod)) p$crit(p,cur,mod) else NaN)
 			ok <- Filter(function (x) !is.na(x) & !is.nan(x),check$score)
 			if (!length(ok)) {
-				message('None of the models converged - giving up ordering attempt.')
+				progress('None of the models converged - giving up ordering attempt.')
 				p$tab <- have
 				p$model <- cur
 				return(p)
@@ -256,31 +258,31 @@ order <- function (p) {
 				form <- build.formula(p$dep,have,p$env)
 				cur <- p$fit(p,form)
 				if (!conv(cur)) {
-					message('The reference model for the next step failed to converge - giving up ordering attempt.')
+					progress('The reference model for the next step failed to converge - giving up ordering attempt.')
 					return(p)
 				}
 			}
-			message(paste0('Updating formula: ',as.character(list(build.formula(p$dep,have)))))
+			progress('Updating formula: ',build.formula(p$dep,have))
 		}
 	}
 
-	message('Determining predictor order')
+	progress('Determining predictor order')
 	if (is.null(p$tab)) p$tab <- tabulate.formula(p$formula) else p$tab$ok <- p$tab$score <- NULL
 	tab <- p$tab
 	fxd <- is.na(tab$grouping)
 	if ('1' %in% tab[fxd,'term']) {
 		where <- tab$block == tab[fxd & tab$term == '1',]$block
-		p$tab <- cbind(tab[where,],ok=T,score=NA)
+		p$tab <- cbind(tab[where,],ok=TRUE,score=NA)
 		tab <- tab[!where,]
 		fxd <- is.na(tab$grouping)
 	}
 	else p$tab <- cbind(tab[0,],ok=logical(),score=numeric())
-	if (!is.null(p$include)) p$tab <- rbind(p$tab,transform(p$include,block=NA,ok=T,score=NA))
+	if (!is.null(p$include)) p$tab <- rbind(p$tab,transform(p$include,block=NA,ok=TRUE,score=NA))
 
-	p$reml <- F
+	p$reml <- FALSE
 	if (any( fxd)) p <- reorder(p,tab[fxd,])
 	if (any(!fxd)) {
-		p$reml <- p$can.use.reml
+		p$reml <- TRUE
 		p <- reorder(p,tab[!fxd,])
 	}
 	p$formula <- build.formula(p$dep,p$tab,p$env)
@@ -288,7 +290,7 @@ order <- function (p) {
 }
 
 reduce.noconv <- function (p) {
-	message('Convergence failure. Reducing terms and retrying...')
+	progress('Convergence failure. Reducing terms and retrying...')
 	cands <- p$tab$block[!is.na(p$tab$block)]
 	if (length(unique(cands)) < 2) {
 		stop('No terms left for reduction, giving up')

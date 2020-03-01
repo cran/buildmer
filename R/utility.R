@@ -11,7 +11,7 @@
 #' @export
 add.terms <- function (formula,add) {
 	dep <- if (length(formula) < 3) '' else as.character(formula[2])
-	terms <- terms(formula,keep.order=T)
+	terms <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
 	terms <- attr(terms,'term.labels')
 	fixed.terms <- Filter(Negate(is.random.term),terms)
@@ -36,7 +36,7 @@ add.terms <- function (formula,add) {
 					grouping <- as.character(bar[3])
 					terms <- as.character(bar[2])
 					form <- mkForm(terms)
-					terms <- terms(form,keep.order=T)
+					terms <- terms(form,keep.order=TRUE)
 					intercept <- attr(terms,'intercept')
 					terms <- attr(terms,'term.labels')
 					terms <- c(terms,bar.terms)
@@ -114,39 +114,51 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 #' sapply(c(good1,good2,bad),conv)
 #' @export
 conv <- function (model,singular.ok=FALSE) {
-	if (inherits(model,'try-error')) return(F)
+	setattr <- function (x,msg,err=NULL) {
+		if (!is.null(err)) msg <- paste0(msg,' (',err,')')
+		attr(x,'reason') <- msg
+		x
+	}
+	failure <- function (msg,err=NULL) setattr(FALSE,msg,err)
+	success <- function (msg,err=NULL) setattr(TRUE,msg,err)
+	if (inherits(model,'try-error')) return(failure(model))
 	if (inherits(model,'gam')) {
 		if (!is.null(model$outer.info)) {
-			if (!is.null(model$outer.info$conv) && model$outer.info$conv != 'full convergence') return(F)
-			ev <- try(eigen(model$outer.info$hess)$values,silent=T)
-			if (inherits(ev,'try-error') || min(ev) < 10*.Machine$double.eps) return(F)
+			if (!is.null(model$outer.info$conv) && (err <- model$outer.info$conv) != 'full convergence') return(failure('mgcv outer convergence failed',err))
+			if ((err <- max(abs(model$outer.info$grad))) > .04) return(failure('Absolute gradient contains values >0.04',err))
+			ev <- try(eigen(model$outer.info$hess)$values,silent=TRUE)
+			if (inherits(ev,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',ev))
+			if ((err <- min(ev)) < -.002) return(failure('Hessian contains negative eigenvalues <-0.002',err))
 		} else {
-			if (!length(model$sp)) return(T)
-			if (!model$mgcv.conv$fully.converged) return(F)
-			if (!model$mgcv.conv$rms.grad < .002) return(F)
-			if (!model$mgcv.conv$hess.pos.def) return(F)
+			if (!length(model$sp)) return(success('No smoothing parameters to optimize'))
+			if (!model$mgcv.conv$fully.converged) return(failure('mgcv reports outer convergence failed'))
+			if ((err <- model$mgcv.conv$rms.grad) > .04) return(failure('mgcv reports absolute gradient containing values >0.04',err))
+			if (!model$mgcv.conv$hess.pos.def) return(failure('mgcv reports non-positive-definite Hessian'))
 		}
+		return(success('All checks passed (gam)'))
 	}
 	if (inherits(model,'merMod')) {
-		if (model@optinfo$conv$opt != 0) return(F)
-		if (!length(model@optinfo$conv$lme4)) return(T)
-		if (is.null(model@optinfo$conv$lme4$code)) return(singular.ok)
-		if (any(model@optinfo$conv$lme4$code != 0)) return(F)
+		if ((err <- model@optinfo$conv$opt) != 0) return(failure('Optimizer reports not having finished',err))
+		if (!length(model@optinfo$conv$lme4)) return(success('No lme4 info available -- succeeding by default (dangerous)'))
+		if (is.null(model@optinfo$conv$lme4$code)) return(setattr(singular.ok,'Singular fit'))
+		if (any((err <- model@optinfo$conv$lme4$code) != 0)) return(failure('lme4 reports not having converged',err))
+		return(success('All checks passed (merMod)'))
 	}
 	if (inherits(model,'glmmTMB')) {
-		if (!is.null(model$fit$convergence) && model$fit$convergence != 0) return(F)
+		if (!is.null(model$fit$convergence) && (err <- model$fit$convergence) != 0) return(failure('glmmTMB reports nonconvergence',err))
 		if (!is.null(model$sdr$pdHess)) {
-			if (!model$sdr$pdHess) return(F)
+			if (!model$sdr$pdHess) return(failure('glmmTMB reports non-positive-definite Hessian'))
 			if (sum(dim(model$sdr$cov.fixed))) {
-				ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=T)
-				if (inherits(ev,'try-error') || (min(ev) < 10*.Machine$double.eps)) return(F)
+				ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=TRUE)
+				if (inherits(ev,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',ev))
+				if ((err <- min(ev)) < -.002) return(failure('Hessian contains negative eigenvalues <-0.002',err))
 			}
 		}
-		return(T)
+		return(success('All checks passed (glmmTMB)'))
 	}
-	if (inherits(model,'nnet')) return(model$convergence == 0)
-	if (inherits(model,'MixMod')) return(model$converged)
-	T
+	if (inherits(model,'nnet'))   return(if (model$convergence == 0) success('All checks passed (nnet)'  ) else failure('nnet reports nonconvergence',model$convergence))
+	if (inherits(model,'MixMod')) return(if (model$converged       ) success('All checks passed (MixMod)') else failure('GLMMadaptive reports nonconvergence'))
+	success('No checks needed or known for this model type',class(model))
 }
 
 #' Convert lme4 random-effect terms to mgcv 're' smooths
@@ -183,9 +195,9 @@ re2mgcv <- function (formula,data) {
 				nm <- paste0(g,'_',nms[i])
 				if (nm %in% org.names) stop('Error: please remove/rename ',nm,' from your data!')
 				data[[nm]] <- terms[,i]
-				term <- paste0('s(',g,',by=',nm,',bs="re")')
+				term <- paste0('s(',g,',',nm,',bs="re")')
 			}
-			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=F)
+			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=FALSE)
 		}			
 	}
 	formula <- build.formula(dep,formula)
@@ -208,13 +220,13 @@ re2mgcv <- function (formula,data) {
 remove.terms <- function (formula,remove) {
 	decompose.random.terms <- function (terms) {
 		terms <- lapply(terms,function (x) {
-			x <- unwrap.terms(x,inner=T)
+			x <- unwrap.terms(x,inner=TRUE)
 			g <- unwrap.terms(x[3])
 			terms <- as.character(x[2])
-			terms <- unwrap.terms(terms,intercept=T)
-			sapply(g,function (g) terms,simplify=F)
+			terms <- unwrap.terms(terms,intercept=TRUE)
+			sapply(g,function (g) terms,simplify=FALSE)
 		})
-		unlist(terms,recursive=F)
+		unlist(terms,recursive=FALSE)
 	}
 	get.random.list <- function (formula) {
 		bars <- lme4::findbars(formula)
@@ -238,9 +250,9 @@ remove.terms <- function (formula,remove) {
 		}
 		!remove %in% forbidden
 	}
-	unwrap.terms <- function (terms,inner=F,intercept=F) {
+	unwrap.terms <- function (terms,inner=FALSE,intercept=FALSE) {
 		form <- stats::as.formula(paste0('~',terms))
-		terms <- terms(form,keep.order=T)
+		terms <- terms(form,keep.order=TRUE)
 		if (intercept) intercept <- attr(terms,'intercept')
 		if (inner) return(terms[[2]])
 		terms <- attr(terms,'term.labels')
@@ -249,7 +261,7 @@ remove.terms <- function (formula,remove) {
 	}
 
 	dep <- as.character(formula[2])
-	terms <- terms(formula,keep.order=T)
+	terms <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
 	terms <- attr(terms,'term.labels')
 	if (intercept) terms <- c('1',terms)
@@ -323,13 +335,13 @@ remove.terms <- function (formula,remove) {
 tabulate.formula <- function (formula,group=NULL) {
 	decompose.random.terms <- function (terms) {
 		terms <- lapply(terms,function (x) {
-			x <- unwrap.terms(x,inner=T)
+			x <- unwrap.terms(x,inner=TRUE)
 			g <- unwrap.terms(x[3])
 			terms <- as.character(x[2])
-			terms <- unwrap.terms(terms,intercept=T)
-			sapply(g,function (g) terms,simplify=F)
+			terms <- unwrap.terms(terms,intercept=TRUE)
+			sapply(g,function (g) terms,simplify=FALSE)
 		})
-		unlist(terms,recursive=F)
+		unlist(terms,recursive=FALSE)
 	}
 	get.random.list <- function (formula) {
 		bars <- lme4::findbars(formula)
@@ -345,12 +357,12 @@ tabulate.formula <- function (formula,group=NULL) {
 		randoms
 	}
 	mkGroups <- function (t) {
-		for (x in group) t <- gsub(x,x,t,perl=T)
+		for (x in group) t <- gsub(x,x,t,perl=TRUE)
 		t
 	}
 
 	dep <- as.character(formula[2])
-	terms <- terms(formula,keep.order=T)
+	terms <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
 	terms <- attr(terms,'term.labels')
 	if (intercept) terms <- c('1',terms)
@@ -369,12 +381,12 @@ tabulate.formula <- function (formula,group=NULL) {
 				terms <- terms[[j]]
 				if (!length(terms)) return(NULL)
 				ix <- paste(i,j)
-				data.frame(index=ix,grouping=g,term=terms,code=paste(ix,g,terms),block=paste(NA,g,mkGroups(terms)),stringsAsFactors=F)
+				data.frame(index=ix,grouping=g,term=terms,code=paste(ix,g,terms),block=paste(NA,g,mkGroups(terms)),stringsAsFactors=FALSE)
 			})
 			terms <- Filter(Negate(is.null),terms)
 			if (!length(terms)) return(NULL)
 			do.call(rbind,terms)
-		} else data.frame(index=NA,grouping=NA,term=term,code=term,block=paste(NA,NA,mkGroups(term)),stringsAsFactors=F)
+		} else data.frame(index=NA,grouping=NA,term=term,code=term,block=paste(NA,NA,mkGroups(term)),stringsAsFactors=FALSE)
 	})
 	terms <- Filter(Negate(is.null),terms)
 	do.call(rbind,terms)

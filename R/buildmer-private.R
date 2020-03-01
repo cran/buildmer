@@ -10,19 +10,13 @@ buildmer.fit <- function (p) {
 		p$tab <- tabulate.formula(p$formula)
 	}
 	if (!is.null(p$dots$REML)) {
-		if (isFALSE(p$dots$REML)) p$can.use.reml <- F
+		if (isFALSE(p$dots$REML)) p$can.use.reml <- FALSE
 		p$dots$REML <- NULL
 	}
 	if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
 
-	# the below comment will be found even if just printing the parsed R code:
-	'If you found this piece of code, congratulations: you can now override the internal buildmer parameter list!'
-	if ('p' %in% names(p$dots)) {
-		p <- c(p,p$dots$p)
-		p$dots$p <- NULL
-	}
 	for (x in c('reduce.fixed','reduce.random')) {
-		p[[x]] <- T
+		p[[x]] <- TRUE
 		if (x %in% names(p$dots)) {
 			p[[x]] <- p$dots[[x]]
 			p$dots[[x]] <- NULL
@@ -30,11 +24,18 @@ buildmer.fit <- function (p) {
 		}
 	}
 
+	# the below comment will be found even if just printing the parsed R code:
+	'If you found this piece of code, congratulations: you can now override the internal buildmer parameter list!'
+	if ('p' %in% names(p$dots)) {
+		p <- c(p,p$dots$p)
+		p$dots$p <- NULL
+	}
+
 	if (is.null(p$cluster)) {
-		p$parallel <- F
+		p$parallel <- FALSE
 		p$parply <- lapply
 	} else {
-		p$parallel <- T
+		p$parallel <- TRUE
 		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
 		p$env <- .GlobalEnv
 		parallel::clusterExport(p$cluster,privates,environment())
@@ -58,11 +59,11 @@ buildmer.fit <- function (p) {
 
 buildmer.finalize <- function (p) {
 	ret <- mkBuildmer(model=p$model,p=p)
-	ret@p$in.buildmer <- T
+	ret@p$in.buildmer <- TRUE
 	if (p$calc.anova) ret@anova <- anova.buildmer(ret,ddf=p$ddf)
 	if (p$calc.summary) ret@summary <- summary.buildmer(ret,ddf=p$ddf)
-	ret@p$in.buildmer <- F
-	if (!is.null(p$cl)) try(parallel::clusterCall(p$cl,rm,list=privates),silent=T)
+	ret@p$in.buildmer <- FALSE
+	if (!is.null(p$cl)) try(parallel::clusterCall(p$cl,rm,list=privates),silent=TRUE)
 	ret
 }
 
@@ -70,10 +71,10 @@ calcWald <- function (table,col.ef,col.df=0) {
 	ef <- table[,col.ef]
 	if (col.df) {
 		df <- table[,col.df]
-		p <- matrix(stats::pchisq(ef,df,lower.tail=F))
+		p <- matrix(stats::pchisq(ef,df,lower.tail=FALSE))
 		colnames(p) <- 'Pr(>F)'
 	} else {
-		p <- matrix(stats::pnorm(abs(ef),lower.tail=F)*2)
+		p <- matrix(stats::pnorm(abs(ef),lower.tail=FALSE)*2)
 		colnames(p) <- 'Pr(>|t|)'
 	}
 	cbind(table,p)
@@ -89,11 +90,11 @@ check.ddf <- function (ddf) {
 	}
 	ddf <- valid[i]
 	if (ddf %in% c('Wald','lme4')) return(ddf)
-	if (!requireNamespace('lmerTest',quietly=T)) {
+	if (!requireNamespace('lmerTest',quietly=TRUE)) {
 		warning('lmerTest package is not available, could not calculate requested denominator degrees of freedom')
 		return('lme4')
 	}
-	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=T)) {
+	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=TRUE)) {
 		warning('pbkrtest package is not available, could not calculate Kenward-Roger denominator degrees of freedom')
 		return('lme4')
 	}
@@ -109,10 +110,10 @@ is.gaussian <- function (family) {
 is.smooth.term <- function (term) has.smooth.terms(mkForm(list(term)))
 is.random.term <- function (term) {
 	term <- mkTerm(term)
-	if (is.name(term)) return(F)
-	if (term[[1]] == '|') return(T)
-	if (term[[1]] == '(' && term[[2]][[1]] == '|') return(T)
-	F
+	if (is.name(term)) return(FALSE)
+	if (term[[1]] == '|') return(TRUE)
+	if (term[[1]] == '(' && term[[2]][[1]] == '|') return(TRUE)
+	FALSE
 }
 mkCrit <- function (crit) if (is.function(crit)) crit else get(paste0('crit.',crit))
 mkCritName <- function (crit) if (is.function(crit)) 'custom' else crit
@@ -120,6 +121,15 @@ mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',cr
 mkForm <- function (term,env=parent.frame()) stats::as.formula(paste0('~',term),env=env)
 mkTerm <- function (term) mkForm(term)[[2]]
 privates <- c('p','build.formula','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.gamm4','patch.lm','patch.lmer','patch.mertree','re2mgcv','run','tabulate.formula')
+
+progress <- function (...) {
+	text <- sapply(list(...),function (x) as.character(list(x)))
+	text <- paste0(text,collapse='')
+	text <- strwrap(text,exdent=4)
+	text <- paste0(text,collapse='\n')
+	message(text)
+	text
+}
 
 unpack.smooth.terms <- function (x) {
 	fm <- stats::as.formula(paste0('~',list(x)))
@@ -137,9 +147,9 @@ unravel <- function (x,sym=c(':','interaction')) {
 	as.character(list(x))
 }
 
-unwrap.terms <- function (terms,inner=F,intercept=F) {
+unwrap.terms <- function (terms,inner=FALSE,intercept=FALSE) {
 	form <- stats::as.formula(paste0('~',terms))
-	terms <- terms(form,keep.order=T)
+	terms <- terms(form,keep.order=TRUE)
 	if (intercept) intercept <- attr(terms,'intercept')
 	if (inner) return(terms[[2]])
 	terms <- attr(terms,'term.labels')
