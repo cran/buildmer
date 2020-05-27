@@ -1,4 +1,5 @@
 buildmer.fit <- function (p) {
+	# Formula
 	if (is.data.frame(p$formula)) {
 		p$tab <- p$formula
 		if (is.null(p$dots$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
@@ -9,50 +10,78 @@ buildmer.fit <- function (p) {
 		p$dep <- as.character(p$formula[2])
 		p$tab <- tabulate.formula(p$formula)
 	}
-	if (!is.null(p$dots$REML)) {
-		if (isFALSE(p$dots$REML)) p$can.use.reml <- FALSE
-		p$dots$REML <- NULL
-	}
+
+	# Include
 	if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
 
-	for (x in c('reduce.fixed','reduce.random')) {
-		p[[x]] <- TRUE
-		if (x %in% names(p$dots)) {
-			p[[x]] <- p$dots[[x]]
-			p$dots[[x]] <- NULL
-			message(paste0("Warning: argument '",x,"' is deprecated; use 'include' instead."))
+	# REML
+	if (!is.null(p$dots$REML)) {
+		if (isTRUE(p$dots$REML)) {
+			# Force on
+			p$force.reml <- TRUE
+		} else if (isFALSE(p$dots$REML)) {
+			# Force off
+			p$can.use.reml <- FALSE
+		}
+		# else: it's NA --> use default:
+		p$dots$REML <- NULL
+	} else {
+		# Default case, in which case one optimization can be applied:
+		if (all(p$crit.name %in% c('deviance','devexp'))) {
+			p$can.use.reml <- FALSE
+			p$force.reml <- TRUE
 		}
 	}
 
-	# the below comment will be found even if just printing the parsed R code:
+	# For user debugging. The below comment will be found even if just printing the parsed R code:
 	'If you found this piece of code, congratulations: you can now override the internal buildmer parameter list!'
 	if ('p' %in% names(p$dots)) {
 		p <- c(p,p$dots$p)
 		p$dots$p <- NULL
 	}
 
+	# Parallel
 	if (is.null(p$cluster)) {
 		p$parallel <- FALSE
 		p$parply <- lapply
+		cleanup.cluster <- FALSE
 	} else {
 		p$parallel <- TRUE
 		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
 		p$env <- .GlobalEnv
+		if (is.numeric(p$cluster)) {
+			p$cluster <- parallel::makeCluster(p$cluster,outfile='')
+			cleanup.cluster <- TRUE
+		} else {
+			cleanup.cluster <- FALSE
+		}
 		parallel::clusterExport(p$cluster,privates,environment())
 	}
 
-	p$reml <- p$can.use.reml
+	# Let's go
+	p$reml <- p$can.use.reml || p$force.reml
 	p$ordered <- ''
 	crits <- p$crit
 	if (length(crits) == 1) crits <- sapply(1:length(p$direction),function (i) crits)
 	if (length(p$direction)) {
-		if (length(crits) != length(p$direction)) stop("Arguments for 'crit' and 'direction' don't make sense together -- they should have the same lengths!")
-		if (length(p$direction)) for (i in 1:length(p$direction)) p <- do.call(p$direction[i],list(p=within.list(p,{ crit <- crits[[i]] })))
-		if ('LRT' %in% p$crit.name && 'LRT' %in% names(p$results)) p$results$LRT <- exp(p$results$LRT)
+		if (length(crits) != length(p$direction)) {
+			stop("Arguments for 'crit' and 'direction' don't make sense together -- they should have the same lengths!")
+		}
+		if (length(p$direction)) {
+			for (i in 1:length(p$direction)) {
+				p <- do.call(p$direction[i],list(p=within.list(p,{ crit <- crits[[i]] })))
+			}
+		}
+		if ('LRT' %in% p$crit.name && 'LRT' %in% names(p$results)) {
+			p$results$LRT <- exp(p$results$LRT)
+		}
 	}
 	if (is.null(p$model)) {
 		message('Fitting the final model')
 		p$model <- p$parply(list(p),p$fit,p$formula)[[1]]
+	}
+	if (cleanup.cluster) {
+		parallel::stopCluster(p$cluster)
 	}
 	p
 }
@@ -71,7 +100,7 @@ calcWald <- function (table,col.ef,col.df=0) {
 	ef <- table[,col.ef]
 	if (col.df) {
 		df <- table[,col.df]
-		p <- matrix(stats::pchisq(ef,df,lower.tail=FALSE))
+		p <- matrix(stats::pchisq(df*ef,df,lower.tail=FALSE))
 		colnames(p) <- 'Pr(>F)'
 	} else {
 		p <- matrix(stats::pnorm(abs(ef),lower.tail=FALSE)*2)
@@ -82,7 +111,7 @@ calcWald <- function (table,col.ef,col.df=0) {
 
 check.ddf <- function (ddf) {
 	if (is.null(ddf)) return('Wald')
-	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger')
+	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger','KR')
 	i <- pmatch(ddf,valid)
 	if (is.na(i)) {
 		warning("Invalid ddf specification, possible options are 'Wald', 'lme4', 'Satterthwaite', 'Kenward-Roger'")
@@ -93,6 +122,9 @@ check.ddf <- function (ddf) {
 	if (!requireNamespace('lmerTest',quietly=TRUE)) {
 		warning('lmerTest package is not available, could not calculate requested denominator degrees of freedom')
 		return('lme4')
+	}
+	if (ddf == 'KR') {
+		ddf <- 'Kenward-Roger'
 	}
 	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=TRUE)) {
 		warning('pbkrtest package is not available, could not calculate Kenward-Roger denominator degrees of freedom')

@@ -38,6 +38,7 @@ buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('ord
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=FALSE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -92,12 +93,69 @@ buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
 	if ('intercept' %in% names(p$data)) stop("To enable buildbam() to work around a problem in bam(), please remove or rename the column named 'intercept' from your data")
 	if (isTRUE(p$dots$I_KNOW_WHAT_I_AM_DOING)) p$dots$I_KNOW_WHAT_I_AM_DOING <- NULL
-	else if (!all(p$crit.name %in% c('custom','deviance','devexp')) && !is.gaussian(p$family)) stop(progress("bam() uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam() instead, or use crit='deviance' (note that this is not a formal test). Alternatively, find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE)"))
+	else if (!all(p$crit.name %in% c('custom','deviance','devexp')) && !is.gaussian(p$family)) stop(progress("bam() uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam() instead, or use crit='deviance' (note that this is not a formal test) or crit='F'. Alternatively, find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE)"))
+	p <- buildmer.fit(p)
+	buildmer.finalize(p)
+}
+
+#' Use \code{buildmer} to fit cumulative link mixed models using \code{clmm} from package \code{ordinal}
+#' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax
+#' @template data
+#' @template common
+#' @template summary
+#' @param ... Additional options to be passed to \code{clmm}
+#' @examples
+#' if (requireNamespace('ordinal')) {
+#' model <- buildclmm(SURENESS ~ PROD + (1|RESP),data=ordinal::soup,link='probit',
+#' 	threshold='equidistant')
+#' }
+#' @template seealso
+#' @details
+#' \code{buildclmm} tries to guess which of \code{...} are intended for \code{clm} and which are for \code{clmm}. If this goes wrong, this behavior can be suppressed by passing explicit \code{clm.control} and \code{clmm.control} arguments. If one of these is specified, any \code{control} argument is interpreted to be intended for the other one; if both are specified in conjunction with a third \code{control} argument, an error is raised.
+#' @export
+buildclmm <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.summary=TRUE,...) {
+	if (!requireNamespace('ordinal',quietly=TRUE)) stop('Please install package ordinal')
+	p <- list(
+		formula=formula,
+		data=data,
+		family=family,
+		cluster=cl,
+		direction=direction,
+		crit=mkCrit(crit),
+		crit.name=mkCritName(crit),
+		elim=mkElim(crit),
+		fit=fit.clmm,
+		include=include,
+		calc.anova=FALSE,
+		calc.summary=calc.summary,
+		data.name=substitute(data),
+		subset.name=substitute(subset),
+		can.use.reml=FALSE,
+		force.reml=FALSE,
+		env=parent.frame(),
+		dots=list(...)
+	)
+	ctrls <- intersect(names(p$dots),c('control','clm.control','clmm.control'))
+	if (length(ctrls) > 2) {
+		stop("Three 'control' arguments were specified---please remove one of them, as it is not clear what you want!")
+	}
+	p$control.names <- list(clm=substitute(clm.control),clmm=substitute(clmm.control))
+	if (is.element('control',ctrls)) {
+		have <- setdiff(ctrls,'control')
+		for (x in c('clm.control','clmm.control')) {
+			if (!is.element(x,ctrls)) {
+				p$dots[[x]] <- p$dots$control
+				p$control.names[[x]] <- substitute(control)
+			}
+		}
+		p$dots$control <- NULL
+	}
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -108,7 +166,7 @@ buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' @template common
 #' @param fit A function taking two arguments, of which the first is the \code{buildmer} parameter list \code{p} and the second one is a formula. The function must return a single object, which is treated as a model object fitted via the provided formula. The function must return an error (`\code{stop()}') if the model does not converge
 #' @param elim A function taking one argument and returning a single value. The first argument is the return value of the function passed in \code{crit}, and the returned value must be a logical indicating if the small model must be selected (return \code{TRUE}) or the large model (return \code{FALSE})
-#' @param REML A logical indicating if the fitting function distinguishes between fits differing in fixed effects (for which \code{p$reml} will be set to FALSE) and fits differing only in the random part (for which \code{p$reml} will be TRUE).
+#' @param REML A logical indicating if the fitting function wishes to distinguish between fits differing in fixed effects (for which \code{p$reml} will be set to FALSE) and fits differing only in the random part (for which \code{p$reml} will be TRUE). Note that this ignores the usual semantics of buildmer's optional \code{REML} argument, because they are redundant: if you wish to force REML on or off, simply code it so in your custom fitting function.
 #' @param ... Additional options to be passed to the fitting function, such as perhaps a \code{data} argument
 #' @examples
 #' ## Use \code{buildmer} to do stepwise linear discriminant analysis
@@ -164,6 +222,7 @@ buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward
 		crit.name='custom criterion',
 		elim=elim,
 		can.use.reml=REML,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -226,6 +285,7 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,cl=NULL,d
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -237,8 +297,8 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,cl=NULL,d
 		if (!all(p$crit.name %in% c('custom','deviance','devexp')) && !is.null(p$dots$optimizer[1]) && p$dots$optimizer[1] != 'outer' && !is.gaussian(p$family)) stop(progress("You are trying to use buildgam() using performance iteration or the EFS optimizer. In this situation, gam() uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam() with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))), use crit='deviance' (note that this is not a formal test), or find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
 		if (inherits(family,'general.family')) {
 			if (p$quickstart) stop('Quickstart is not possible with the ',family$family,' family')
-			p$can.use.reml <- FALSE
 			warning(progress('The ',family$family," family can only be fitted using REML. Adding select=TRUE to gam()'s command arguments (see ?gam to review the implications), and refusing to eliminate fixed effects"))
+			p$force.reml <- TRUE
 			p$dots$select <- TRUE
 			if (!is.data.frame(p$formula)) {
 				p$dots$dep <- as.character(p$formula[2])
@@ -293,6 +353,7 @@ buildgamm <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		finalize=FALSE,
 		dots=list(...)
@@ -355,6 +416,7 @@ buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c(
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=is.gaussian(family),
+		force.reml=FALSE,
 		env=parent.frame(),
 		finalize=FALSE,
 		dots=list(...)
@@ -402,6 +464,7 @@ buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -444,60 +507,10 @@ buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
-	p <- buildmer.fit(p)
-	buildmer.finalize(p)
-}
-
-#' Use \code{buildmer} to perform stepwise elimination on models fit with Julia package \code{MixedModels} via \code{JuliaCall}
-#' @template formula
-#' @template data
-#' @template family
-#' @param direction See the general documentation under \code{\link{buildmer-package}}
-#' @param crit See the general documentation under \code{\link{buildmer-package}}
-#' @param include See the general documentation under \code{\link{buildmer-package}}
-#' @param julia_family For generalized linear mixed models, the name of the Julia function to evaluate to obtain the error distribution. Only used if \code{family} is non-Gaussian This should probably be the same as \code{family} but with an initial capital, with the notable exception of logistic regression: if the R family is \code{binomial}, the Julia family should be \code{'Bernoulli'}
-#' @param julia_link For generalized linear mixed models, the name of the Julia function to evaluate to obtain the link function. Only used if \code{family} is non-Gaussian If not provided, Julia's default link for your error distribution is used
-#' @param julia_fun If you need to change some parameters in the Julia model object before Julia \code{fit!} is called, you can provide an R function to manipulate the unfitted Julia object here. This function should accept two arguments: the first is the \code{julia} structure, which is a list containing a \code{call} element you can use as a function to call Julia; the second argument is the R \code{JuliaObject} corresponding to the unfitted Julia model. This can be used to e.g. change optimizer parameters before the model is fitted
-#' @param ... Additional options to be passed to \code{LinearMixedModel()} or \code{GeneralizedLinearMixedModel()}
-#' @examples
-#' \donttest{
-#' if (requireNamespace('JuliaCall')) model <- buildjulia(f1 ~ vowel*timepoint*following +
-#'        (1|participant) + (1|word),data=vowels)
-#' }
-#' @template seealso
-#' @importFrom stats gaussian
-#' @export
-buildjulia <- function (formula,data=NULL,family=gaussian(),include=NULL,julia_family=gaussian(),julia_link=NULL,julia_fun=NULL,direction=c('order','backward'),crit='LRT',...) {
-	warning(progress("buildjulia() is deprecated and will be removed in a future version of buildmer! There is no replacement, but you should be able to cook one up yourself using buildcustom() (note that the various julia-specific functions such as AIC.julia will also be removed). Sorry, the maintenance cost/benefit trade-off is just too negative!"))
-	if (!requireNamespace('JuliaCall',quietly=TRUE)) stop('Please install package JuliaCall')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		include=include,
-		julia_family=substitute(julia_family),
-		julia_link=substitute(julia_link),
-		julia_fun=julia_fun,
-		cl=NULL,
-		direction=direction,
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.julia,
-		calc.anova=FALSE,
-		calc.summary=FALSE,
-		can.use.reml=is.gaussian(family),
-		env=parent.frame(),
-		dots=list(...)
-	)
-
-	message('Setting up Julia...')
-	p$julia <- JuliaCall::julia_setup(verbose=TRUE)
-	p$julia$library('MixedModels')
-	p$crit <- function (p,ref,alt) mkCrit(paste0(crit,'.julia'))(p,ref,alt)
-
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -537,6 +550,7 @@ buildlme <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=TRUE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -588,6 +602,7 @@ buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=is.gaussian(family),
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
@@ -667,6 +682,7 @@ buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 		subset.name=substitute(subset),
 		control.name=if (is.gaussian(family)) substitute(lmer.control) else substitute(glmer.control),
 		can.use.reml=FALSE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=dots
 	)
@@ -708,6 +724,7 @@ buildmultinom <- function (formula,data=NULL,cl=NULL,direction=c('order','backwa
 		subset.name=substitute(subset),
 		control.name=substitute(control),
 		can.use.reml=FALSE,
+		force.reml=FALSE,
 		env=parent.frame(),
 		dots=list(...)
 	)
