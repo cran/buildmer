@@ -2,9 +2,8 @@
 #' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{mixed_model}, \code{buildGLMMadaptive} does not use a separate \code{random} argument!)
 #' @template data
 #' @template family
-#' @template common
-#' @template summary
-#' @param ... Additional options to be passed to \code{mixed_model}
+#' @template control
+#' @param ... Additional options to be passed to \code{mixed_model}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' \dontshow{
 #' if (requireNamespace('GLMMadaptive')) model <- buildGLMMadaptive(stress ~ (1|word),family=binomial,data=vowels,nAGQ=1)
@@ -18,30 +17,11 @@
 #' The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
 #' @template seealso
 #' @export
-buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.summary=TRUE,...) {
-	if (!requireNamespace('GLMMadaptive',quietly=TRUE)) stop('Please install package GLMMadaptive')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.GLMMadaptive,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=calc.summary,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=FALSE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildGLMMadaptive <- function (formula,data=NULL,family,buildmerControl=buildmerControl(),...) {
+	if (!requireNamespace('GLMMadaptive',quietly=TRUE)) {
+		stop('Please install package GLMMadaptive')
+	}
+	p <- buildmer.prep(match.call(),add=list(fit=fit.GLMMadaptive,can.use.reml=FALSE),banned=c('calc.anova','ddf'))
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -50,10 +30,8 @@ buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('ord
 #' @template formula
 #' @template data
 #' @template family
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ... Additional options to be passed to \code{bam}
+#' @template control
+#' @param ... Additional options to be passed to \code{bam}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @details
 #' To work around an issue in \code{bam()}, you must make sure that your data do not contain a variable named 'intercept'.
 #' 
@@ -63,7 +41,7 @@ buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('ord
 #' @examples
 #' \dontshow{
 #' library(buildmer)
-#' model <- buildbam(f1 ~ s(timepoint,bs='cr'),data=vowels)
+#' model <- buildbam(f1 ~ s(timepoint,bs='cr'),data=vowels,buildmerControl=list(discrete=TRUE))
 #' }
 #' \donttest{
 #' library(buildmer)
@@ -73,33 +51,21 @@ buildGLMMadaptive <- function (formula,data=NULL,family,cl=NULL,direction=c('ord
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.bam,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
-	if ('intercept' %in% names(p$data)) stop("To enable buildbam() to work around a problem in bam(), please remove or rename the column named 'intercept' from your data")
-	if (isTRUE(p$dots$I_KNOW_WHAT_I_AM_DOING)) p$dots$I_KNOW_WHAT_I_AM_DOING <- NULL
-	else if (!all(p$crit.name %in% c('custom','deviance','devexp')) && !is.gaussian(p$family)) stop(progress("bam() uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam() instead, or use crit='deviance' (note that this is not a formal test) or crit='F'. Alternatively, find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE)"))
+buildbam <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(fit=fit.bam),banned='ddf')
+	if ('intercept' %in% names(p$data)) {
+		stop("To enable buildbam() to work around a problem in bam(), please remove or rename the column named 'intercept' from your data")
+	}
+	if (!p$I_KNOW_WHAT_I_AM_DOING && !p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT','LL'))) {
+		stop(progress(p,"bam() uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam() instead, use crit='F', or use crit='deviance' (note that this is not a formal test). (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
+	}
+	f <- formals(match.fun('buildmerControl'))
+	if (p$grad.tol == f$grad.tol) {
+		p$grad.tol <- 100*p$grad.tol
+	}
+	if (p$hess.tol == f$hess.tol) {
+		p$hess.tol <- 100*p$hess.tol
+	}
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -107,9 +73,8 @@ buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' Use \code{buildmer} to fit cumulative link mixed models using \code{clmm} from package \code{ordinal}
 #' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax
 #' @template data
-#' @template common
-#' @template summary
-#' @param ... Additional options to be passed to \code{clmm}
+#' @template control
+#' @param ... Additional options to be passed to \code{clmm}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' if (requireNamespace('ordinal')) {
 #' model <- buildclmm(SURENESS ~ PROD + (1|RESP),data=ordinal::soup,link='probit',
@@ -119,28 +84,11 @@ buildbam <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' @details
 #' \code{buildclmm} tries to guess which of \code{...} are intended for \code{clm} and which are for \code{clmm}. If this goes wrong, this behavior can be suppressed by passing explicit \code{clm.control} and \code{clmm.control} arguments. If one of these is specified, any \code{control} argument is interpreted to be intended for the other one; if both are specified in conjunction with a third \code{control} argument, an error is raised.
 #' @export
-buildclmm <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.summary=TRUE,...) {
-	if (!requireNamespace('ordinal',quietly=TRUE)) stop('Please install package ordinal')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.clmm,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=calc.summary,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		can.use.reml=FALSE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildclmm <- function (formula,data=NULL,buildmerControl=buildmerControl(),...) {
+	if (!requireNamespace('ordinal',quietly=TRUE)) {
+		stop('Please install package ordinal')
+	}
+	p <- buildmer.prep(match.call(),add=list(fit=fit.clmm),banned=c('family','ddf'))
 	ctrls <- intersect(names(p$dots),c('control','clm.control','clmm.control'))
 	if (length(ctrls) > 2) {
 		stop("Three 'control' arguments were specified---please remove one of them, as it is not clear what you want!")
@@ -163,11 +111,12 @@ buildclmm <- function (formula,data=NULL,cl=NULL,direction=c('order','backward')
 #' Use \code{buildmer} to perform stepwise elimination using a custom fitting function
 #' @template formula
 #' @template data
-#' @template common
 #' @param fit A function taking two arguments, of which the first is the \code{buildmer} parameter list \code{p} and the second one is a formula. The function must return a single object, which is treated as a model object fitted via the provided formula. The function must return an error (`\code{stop()}') if the model does not converge
-#' @param elim A function taking one argument and returning a single value. The first argument is the return value of the function passed in \code{crit}, and the returned value must be a logical indicating if the small model must be selected (return \code{TRUE}) or the large model (return \code{FALSE})
+#' @param crit A function taking one argument and returning a single value. The argument is the return value of the function passed in \code{fit}, and the returned value must be a numeric indicating the goodness of fit, where smaller is better (like AIC or BIC).
+#' @param elim A function taking one argument and returning a single value. The argument is the return value of the function passed in \code{crit}, and the returned value must be a logical indicating if the small model must be selected (return \code{TRUE}) or the large model (return \code{FALSE})
 #' @param REML A logical indicating if the fitting function wishes to distinguish between fits differing in fixed effects (for which \code{p$reml} will be set to FALSE) and fits differing only in the random part (for which \code{p$reml} will be TRUE). Note that this ignores the usual semantics of buildmer's optional \code{REML} argument, because they are redundant: if you wish to force REML on or off, simply code it so in your custom fitting function.
-#' @param ... Additional options to be passed to the fitting function, such as perhaps a \code{data} argument
+#' @template control
+#' @param ... Additional options to be passed to the fitting function, such as perhaps a \code{data} argument; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' ## Use \code{buildmer} to do stepwise linear discriminant analysis
 #' library(buildmer)
@@ -204,28 +153,8 @@ buildclmm <- function (formula,data=NULL,cl=NULL,direction=c('order','backward')
 #'        multilingual,data=migrant)
 #' @template seealso
 #' @export
-buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit=function (p,ref,alt) stop("'crit' not specified"),include=NULL,fit=function (p,formula) stop("'fit' not specified"),elim=function (x) stop("'elim' not specified"),REML=FALSE,...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		cluster=cl,
-		direction=direction,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=FALSE,
-		ddf=NULL,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		fit=fit,
-		crit=crit,
-		crit.name='custom criterion',
-		elim=elim,
-		can.use.reml=REML,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildcustom <- function (formula,data=NULL,fit=function (p,formula) stop("'fit' not specified"),crit=function (p,ref,alt) stop("'crit' not specified"),elim=function (x) stop("'elim' not specified"),REML=FALSE,buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(),banned=NULL)
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -234,11 +163,9 @@ buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward
 #' @template formula
 #' @template data
 #' @template family
-#' @param quickstart A numeric with values 0 to 5. If set to 1, will use \code{bam} to obtain starting values for \code{gam}'s outer iteration, potentially resulting in a much faster fit for each model. If set to 2, will disregard ML/REML and always use \code{bam}'s \code{fREML}. 3 also sets \code{discrete=TRUE}. Values between 3 and 4 fit the quickstart model to a subset of that value (e.g., \code{quickstart=3.1} fits the quickstart model to 10\% of the data, which is also the default if \code{quickstart=3}. Values between 4 and 5 do the same, but also set a very sloppy convergence tolerance of 0.2.
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ... Additional options to be passed to \code{gam}
+#' @param quickstart A numeric with values from 0 to 5. If set to 1, will use \code{bam} to obtain starting values for \code{gam}'s outer iteration, potentially resulting in a much faster fit for each model. If set to 2, will disregard ML/REML and always use \code{bam}'s \code{fREML} for the quickstart fit. 3 also sets \code{discrete=TRUE}. Values between 3 and 4 fit the quickstart model to a subset of that value (e.g.\ \code{quickstart=3.1} fits the quickstart model to 10\% of the data, which is also the default if \code{quickstart=3}. Values between 4 and 5 do the same, but also set a very sloppy convergence tolerance of 0.2.
+#' @template control
+#' @param ... Additional options to be passed to \code{gam}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @details
 #' To work around an issue in \code{gam()}, you must make sure that your data do not contain a variable named 'intercept'.
 #' 
@@ -264,47 +191,28 @@ buildcustom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		quickstart=quickstart,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.gam,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(fit=fit.gam),banned='ddf')
 	if (is.null(p$data)) stop('Sorry, buildgam() requires data to be passed via the data= argument')
 	if ('intercept' %in% names(p$data)) stop("To enable buildgam() to work around a problem in gam(), please remove or rename the column named 'intercept' from your data")
-	if (isTRUE(p$dots$I_KNOW_WHAT_I_AM_DOING)) p$dots$I_KNOW_WHAT_I_AM_DOING <- NULL else {
-		if (is.character(family)) family <- get(family)
-		if (is.function (family)) family <- family()
-		if (!all(p$crit.name %in% c('custom','deviance','devexp')) && !is.null(p$dots$optimizer[1]) && p$dots$optimizer[1] != 'outer' && !is.gaussian(p$family)) stop(progress("You are trying to use buildgam() using performance iteration or the EFS optimizer. In this situation, gam() uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam() with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))), use crit='deviance' (note that this is not a formal test), or find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
-		if (inherits(family,'general.family')) {
-			if (p$quickstart) stop('Quickstart is not possible with the ',family$family,' family')
-			warning(progress('The ',family$family," family can only be fitted using REML. Adding select=TRUE to gam()'s command arguments (see ?gam to review the implications), and refusing to eliminate fixed effects"))
+	if (!p$I_KNOW_WHAT_I_AM_DOING) {
+		if (!p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT')) && !is.null(p$dots$optimizer[1]) && p$dots$optimizer[1] != 'outer') {
+		       stop(progress(p,"You are trying to use buildgam() using performance iteration or the EFS optimizer. In this situation, gam() uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam() with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))), use crit='deviance' (note that this is not a formal test) or crit='F', or find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
+		}
+		if (inherits(p$family,'general.family')) {
+			if (p$quickstart) {
+				stop('Quickstart is not possible with the ',p$family$family,' family')
+			}
+			warning(progress(p,'The ',p$family$family," family can only be fitted using REML. Adding select=TRUE to gam()'s command arguments (see ?gam to review the implications), and refusing to eliminate fixed effects"))
 			p$force.reml <- TRUE
 			p$dots$select <- TRUE
 			if (!is.data.frame(p$formula)) {
-				p$dots$dep <- as.character(p$formula[2])
+				p$dep <- as.character(p$formula[2])
 				p$formula <- tabulate.formula(p$formula)
 			}
-			if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
+			if (!is.null(p$include) && 'formula' %in% class(p$include)) {
+				p$include <- tabulate.formula(p$include)
+			}
 			add <- p$formula[!sapply(p$formula$term,is.smooth.term),]
 			p$include <- if (is.null(p$include)) add else rbind(p$include,add)
 		}
@@ -317,10 +225,8 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,cl=NULL,d
 #' @template formula
 #' @template data
 #' @template family
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ... Additional options to be passed to \code{gamm}
+#' @template control
+#' @param ... Additional options to be passed to \code{gamm}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' \donttest{
 #' library(buildmer)
@@ -333,38 +239,17 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,cl=NULL,d
 #' The fixed and random effects are to be passed as a single formula in \code{lme4} format. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
 #' Only a single grouping factor is allowed. The random-effect covariance matrix is always unstructured. If you want to use \code{pdMat} covariance structures, you must (a) \emph{not} specify any \code{lme4} random-effects term in the formula, and (b) specify your own custom \code{random} argument as part of the \code{...} argument. Note that \code{buildgamm} will merely pass this through; no term reordering or stepwise elimination is done on a user-provided \code{random} argument.
 #' @export
-buildgamm <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.gamm,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		finalize=FALSE,
-		dots=list(...)
-	)
-	if (!is.gaussian(family)) {
-		if (!isTRUE(p$dots$I_KNOW_WHAT_I_AM_DOING)) p$dots$I_KNOW_WHAT_I_AM_DOING <- NULL
-		else stop("You are trying to use buildgamm() with a non-Gaussian error family. In this situation, gamm() uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam() with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))). (If you really know what you are doing, you can sidestep this error by passing an argument 'I_KNOW_WHAT_I_AM_DOING'.)")
+buildgamm <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(fit=fit.gamm),banned='ddf')
+	if (!p$is.gaussian && !p$I_KNOW_WHAT_I_AM_DOING) {
+		stop("You are trying to use buildgamm() with a non-Gaussian error family. In this situation, gamm() uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam() with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))). (If you really know what you are doing, you can sidestep this error by passing an argument 'I_KNOW_WHAT_I_AM_DOING'.)")
 	}
+	p$finalize <- FALSE
 	p <- buildmer.fit(p)
 	if (has.smooth.terms(p$formula)) {
-		message('Fitting final gamm model')
+		if (!p$quiet) {
+			progress(p,'Fitting final gamm model')
+		}
 		p$reml <- p$finalize <- TRUE
 		p$model <- fit.gamm(p,p$formula)
 	}
@@ -375,11 +260,8 @@ buildgamm <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('
 #' @template formula
 #' @template data
 #' @template family
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ddf The method used for calculating \emph{p}-values if all smooth terms were eliminated and \code{calc.anova=TRUE} or \code{calc.summary=TRUE}. Options are \code{'Wald'} (default), \code{'Satterthwaite'} (if package \code{lmerTest} is available), \code{'Kenward-Roger'} (if packages \code{lmerTest} and \code{pbkrtest} are available), and \code{'lme4'} (no \emph{p}-values)
-#' @param ... Additional options to be passed to \code{gamm4}
+#' @template control
+#' @param ... Additional options to be passed to \code{gamm4}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' \dontshow{
 #' library(buildmer)
@@ -395,35 +277,15 @@ buildgamm <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,ddf='Wald',...) {
+buildgamm4 <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
 	if (!requireNamespace('gamm4',quietly=TRUE)) stop('Please install package gamm4')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.gamm4,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=ddf,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=is.gaussian(family),
-		force.reml=FALSE,
-		env=parent.frame(),
-		finalize=FALSE,
-		dots=list(...)
-	)
+	p <- buildmer.prep(match.call(),add=list(fit=fit.gamm4,finalize=FALSE),banned='ddf')
+	p$finalize <- FALSE
 	p <- buildmer.fit(p)
 	if (has.smooth.terms(p$formula)) {
-		message('Fitting final gamm4 model')
+		if (!p$quiet) {
+			progress(p,'Fitting final gamm4 model')
+		}
 		p$reml <- p$finalize <- TRUE
 		p$model <- fit.gamm4(p,p$formula)
 	}
@@ -434,40 +296,21 @@ buildgamm4 <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c(
 #' @template formula
 #' @template data
 #' @template family
-#' @template common
-#' @template summary
-#' @param ... Additional options to be passed to \code{glmmTMB}
+#' @template control
+#' @param ... Additional options to be passed to \code{glmmTMB}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' library(buildmer)
-#' model <- if (requireNamespace('glmmTMB')) buildglmmTMB(Reaction ~ Days + (Days|Subject)
-#'        ,data=lme4::sleepstudy)
+#' if (requireNamespace('glmmTMB')) {
+#' 	model <- buildglmmTMB(Reaction ~ Days + (Days|Subject),data=lme4::sleepstudy)
+#' }
 #' @template seealso
 #' @importFrom stats gaussian
 #' @export
-buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.summary=TRUE,...) {
-	if (!requireNamespace('glmmTMB',quietly=TRUE)) stop('Please install package glmmTMB')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.glmmTMB,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=calc.summary,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildglmmTMB <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
+	if (!requireNamespace('glmmTMB',quietly=TRUE)) {
+		stop('Please install package glmmTMB')
+	}
+	p <- buildmer.prep(match.call(),add=list(fit=fit.glmmTMB),banned=c('calc.anova','ddf'))
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -475,10 +318,8 @@ buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 #' Use \code{buildmer} to fit generalized-least-squares models using \code{gls} from \code{nlme}
 #' @template formula
 #' @template data
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ... Additional options to be passed to \code{gls}
+#' @template control
+#' @param ... Additional options to be passed to \code{gls}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @details
 #' A workaround is included to prevent an error when the model matrix is of less than full rank. The summary output of such a model will look a bit strange!
 #' @examples
@@ -488,29 +329,8 @@ buildglmmTMB <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 #' model <- buildgls(f1 ~ timepoint*following,correlation=corAR1(form=~1|event),data=vowels)
 #' @template seealso
 #' @export
-buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		family=gaussian(),
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.gls,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildgls <- function (formula,data=NULL,buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(fit=fit.gls),banned=c('family','ddf'))
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -518,10 +338,8 @@ buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 #' Use \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}
 #' @param formula A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{lme}, \code{buildlme} does not use a separate \code{random} argument!)
 #' @template data
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ... Additional options to be passed to \code{lme}
+#' @template control
+#' @param ... Additional options to be passed to \code{lme}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' library(buildmer)
 #' model <- buildlme(Reaction ~ Days + (Days|Subject),data=lme4::sleepstudy)
@@ -530,30 +348,9 @@ buildgls <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 #' Only a single grouping factor is allowed. The random-effect covariance matrix is always unstructured. If you want to use \code{pdMat} covariance structures, you must (a) \emph{not} specify any \code{lme4} random-effects term in the formula, and (b) specify your own custom \code{random} argument as part of the \code{...} argument. Note that \code{buildlme} will merely pass this through; no term reordering or stepwise elimination is done on a user-provided \code{random} argument.
 #' @template seealso
 #' @export
-buildlme <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,...) {
+buildlme <- function (formula,data=NULL,buildmerControl=buildmerControl(),...) {
 	if (!requireNamespace('nlme',quietly=TRUE)) stop('Please install package nlme')
-	p <- list(
-		formula=formula,
-		data=data,
-		family=gaussian(),
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.lme,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=TRUE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+	p <- buildmer.prep(match.call(),add=list(fit=fit.lme),banned=c('family','ddf'))
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -562,58 +359,39 @@ buildlme <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),
 #' @template formula
 #' @template data
 #' @template family
-#' @template common
-#' @template anova
-#' @template summary
-#' @param ddf The method used for calculating \emph{p}-values if \code{calc.anova=TRUE} or \code{calc.summary=TRUE}. Options are \code{'Wald'} (default), \code{'Satterthwaite'} (if package \code{lmerTest} is available), \code{'Kenward-Roger'} (if packages \code{lmerTest} and \code{pbkrtest} are available), and \code{'lme4'} (no \emph{p}-values)
-#' @param ... Additional options to be passed to \code{lmer}, \code{glmer}, or \code{gamm4}. (They will also be passed to \code{(g)lm} in so far as they're applicable, so you can use arguments like \code{subset=...} and expect things to work. The single exception is the \code{control} argument, which is assumed to be meant only for \code{lme4} and not for \code{(g)lm}, and will \emph{not} be passed on to \code{(g)lm})
+#' @template control
+#' @param ... Additional options to be passed to \code{lmer}, \code{glmer}, or \code{gamm4}. (They will also be passed to \code{(g)lm} in so far as they're applicable, so you can use arguments like \code{subset=...} and expect things to work. The single exception is the \code{control} argument, which is assumed to be meant only for \code{lme4} and not for \code{(g)lm}, and will \emph{not} be passed on to \code{(g)lm}). For backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence.
 #' @examples
 #' library(buildmer)
 #' model <- buildmer(Reaction ~ Days + (Days|Subject),lme4::sleepstudy)
 #' 
-#' #tests from github issue #2:
+#' # Tests from github issue #2, that also show the use of the 'direction' and 'crit' parameters:
 #' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
-#'        family=binomial,data=lme4::cbpp)
+#' 	family=binomial,data=lme4::cbpp)
 #' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
-#'        family=binomial,data=lme4::cbpp,direction='forward')
+#' 	family=binomial,data=lme4::cbpp,buildmerControl=buildmerControl(direction='forward'))
 #' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
-#'        family=binomial,data=lme4::cbpp,crit='AIC')
+#' 	family=binomial,data=lme4::cbpp,buildmerControl=buildmerControl(crit='AIC'))
 #' bm.test <- buildmer(cbind(incidence,size - incidence) ~ period + (1 | herd),
-#'        family=binomial,data=lme4::cbpp,direction='forward',crit='AIC')
+#' 	family=binomial,data=lme4::cbpp,
+#' 	buildmerControl=buildmerControl(direction='forward',crit='AIC'))
 #' @importFrom stats gaussian
 #' @export
-buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.anova=FALSE,calc.summary=TRUE,ddf='Wald',...) {
-	p <- list(
-		formula=formula,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.buildmer,
-		include=include,
-		calc.anova=calc.anova,
-		calc.summary=calc.summary,
-		ddf=ddf,
-		family.name=substitute(family),
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=is.gaussian(family),
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+buildmer <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
+	p <- buildmer.prep(match.call(),add=list(fit=fit.buildmer),banned=NULL)
 	p <- buildmer.fit(p)
-	if (inherits(p$model,'lmerMod') && requireNamespace('lmerTest',quietly=TRUE)) {
+	if (inherits(p$model,'lmerMod') && requireNamespace('lmerTest',quietly=TRUE) && p$ddf != 'lme4') {
 		# Even if the user did not request lmerTest ddf, convert the model to an lmerTest object anyway in case the user is like me and only thinks about the ddf after having fitted the model
-		message('Finalizing by converting the model to lmerTest')
+		if (!p$quiet) {
+			progress(p,'Finalizing by converting the model to lmerTest')
+		}
 		p$model@call$data <- p$data
-		if ('subset' %in% names(p$dots)) p$model@call$subset <- p$dots$subset
+		if ('subset'  %in% names(p$dots)) p$model@call$subset  <- p$dots$subset
 		if ('control' %in% names(p$dots)) p$model@call$control <- p$dots$control
+		if ('weights' %in% names(p$dots)) p$model@call$weights <- p$dots$weights
+		fun <- p$model@call[[1]]
 		p$model <- patch.lmer(p,lmerTest::as_lmerModLmerTest,list(p$model))
+		p$model@call[[1]] <- fun
 	}
 	buildmer.finalize(p)
 }
@@ -622,71 +400,57 @@ buildmer <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('o
 #' @param formula Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and the fixed and random effects for the regression part. In the latter case, the additional argument \code{partitioning} must be specified as a one-sided formula containing the partitioning part of the model.
 #' @template data
 #' @template family
-#' @template common
-#' @template summary
-#' @param ... Additional options to be passed to \code{lmertree} or \code{glmertree}. (They will also be passed to \code{(g)lmtree} in so far as they're applicable. The single exception is the \code{control} argument, which is assumed to be meant only for \code{(g)lmertree} and not for \code{(g)lmtree}, and will \emph{not} be passed on to \code{(g)lmtree})
+#' @template control
+#' @param ... Additional options to be passed to \code{lmertree} or \code{glmertree}. (They will also be passed to \code{(g)lmtree} in so far as they're applicable. The single exception is the \code{control} argument, which is assumed to be meant only for \code{(g)lmertree} and not for \code{(g)lmtree}, and will \emph{not} be passed on to \code{(g)lmtree}). For backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence.
 #' @examples
 #' if (requireNamespace('glmertree')) {
-#' 	model <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,crit='LL',direction='order',
+#' 	model <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,
+#' 		buildmerControl=buildmerControl(crit='LL',direction='order'),
 #'	        data=lme4::sleepstudy)
 #' \donttest{
-#' 	model <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,crit='LL',direction='order',
+#' 	model <- buildmertree(Reaction ~ 1 | (Days|Subject) | Days,
+#' 		buildmerControl=buildmerControl(crit='LL',direction='order'),
 #' 	        data=lme4::sleepstudy,family=Gamma(link=identity),joint=FALSE)
 #' }
 #' }
 #' @template seealso
 #' @details
 #' Note that the likelihood-ratio test is not available for \code{glmertree} models, as it cannot be assured that the models being compared are nested. The default is thus to use AIC.
-#' In the generalized case or when testing many partitioning variables, it is recommended to pass \code{joint=FALSE}, as this results in a dramatical speed gain and reduces the odds of the final \code{glmer} model failing to converge or converging singularly.
+#' In the generalized case or when testing many partitioning variables, it is recommended to pass \code{joint=FALSE}, as this results in a dramatic speed gain and reduces the odds of the final \code{glmer} model failing to converge or converging singularly.
 #' @importFrom stats gaussian
 #' @export
-buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=c('order','backward'),crit='AIC',include=NULL,calc.summary=TRUE,...) {
-	if (!requireNamespace('glmertree',quietly=TRUE)) stop('Please install package glmertree')
-	if (!requireNamespace('partykit',quietly=TRUE)) stop('Please install package partykit')
-	if (any( (is.character(crit) & crit == 'LRT') | (!is.character(crit) & isTRUE(all.equal(crit,crit.LRT))) )) stop("The likelihood-ratio test is not suitable for glmertree models, as there is no way to guarantee that two models being compared are nested. It is suggested to use the raw log-likelihood instead (crit='LL') and only perform the term-ordering step (direction='order'). If you require stepwise elimination, information criteria such as AIC should be valid.")
+buildmertree <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(crit='AIC'),...) {
+	if (!requireNamespace('glmertree',quietly=TRUE)) {
+		stop('Please install package glmertree')
+	}
+	if (!requireNamespace('partykit',quietly=TRUE)) {
+		stop('Please install package partykit')
+	}
 
-	dots <- list(...)
-	if (is.null(dots$partitioning)) {
-		sane <- function (a,b) if (a != b) stop('Error: formula does not seem to be in glmertree format. Use the following format: dep ~ offset terms | random-effect terms | partitioning variables, where the random effects are specified in lme4 form, e.g. dep ~ a | (1|b) + (1|c) | d.')
+	p <- buildmer.prep(match.call(),add=list(fit=fit.mertree),banned=c('calc.anova','ddf'))
+	if (is.null(p$data)) stop("Sorry, buildmertree() requires data to be passed via the data= argument")
+	if (is.null(p$dots$partitioning)) {
+		sane <- function (a,b) if (a != b) {
+			stop('Error: formula does not seem to be in glmertree format. Use the following format: dep ~ offset terms | random-effect terms | partitioning variables, where the random effects are specified in lme4 form, e.g. dep ~ a | (1|b) + (1|c) | d.')
+		}
 		sane(formula[[1]],'~')
 		dep <- formula[[2]]
 		terms <- formula[[3]]
 		sane(terms[[1]],'|')
-		partitioning <- as.character(terms[3])
+		p$partitioning <- as.character(terms[3])
 		terms <- terms[[2]]
 		sane(terms[[1]],'|')
 		left <- as.character(terms[2])
 		middle <- as.character(terms[3])
-		formula <- stats::as.formula(paste0(dep,'~',paste0(c(left,middle),collapse='+')),env=parent.frame())
+		p$formula <- stats::as.formula(paste0(dep,'~',paste0(c(left,middle),collapse='+')))
 	} else {
-		partitioning <- as.character(dots$partitioning[2])
-		dots$partitioning <- NULL
+		p$partitioning <- as.character(p$dots$partitioning[2])
+		p$dots$partitioning <- NULL
 	}
 
-	p <- list(
-		formula=formula,
-		partitioning=partitioning,
-		data=data,
-		family=family,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.mertree,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=if (is.gaussian(family)) substitute(lmer.control) else substitute(glmer.control),
-		can.use.reml=FALSE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=dots
-	)
-	if (is.null(p$data)) stop("Sorry, buildmertree() requires data to be passed via the data= argument")
+	if (any(p$crit.name == 'LRT')) {
+		stop('The likelihood-ratio test is not suitable for glmertree models, as there is no way to guarantee that two models being compared are nested. It is suggested to use information criteria such as AIC instead.')
+	}
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }
@@ -694,9 +458,8 @@ buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 #' Use \code{buildmer} to perform stepwise elimination for \code{multinom} models from package \code{nnet}
 #' @template formula
 #' @template data
-#' @template common
-#' @template summary
-#' @param ... Additional options to be passed to \code{multinom}
+#' @template control
+#' @param ... Additional options to be passed to \code{multinom}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence
 #' @examples
 #' if (requireNamespace('nnet') && require('MASS')) {
 #' 	options(contrasts = c("contr.treatment", "contr.poly"))
@@ -705,29 +468,9 @@ buildmertree <- function (formula,data=NULL,family=gaussian(),cl=NULL,direction=
 #' }
 #' @template seealso
 #' @export
-buildmultinom <- function (formula,data=NULL,cl=NULL,direction=c('order','backward'),crit='LRT',include=NULL,calc.summary=TRUE,...) {
+buildmultinom <- function (formula,data=NULL,buildmerControl=buildmerControl(),...) {
 	if (!requireNamespace('nnet',quietly=TRUE)) stop('Please install package nnet')
-	p <- list(
-		formula=formula,
-		data=data,
-		cluster=cl,
-		direction=direction,
-		crit=mkCrit(crit),
-		crit.name=mkCritName(crit),
-		elim=mkElim(crit),
-		fit=fit.multinom,
-		include=include,
-		calc.anova=FALSE,
-		calc.summary=calc.summary,
-		ddf=NULL,
-		data.name=substitute(data),
-		subset.name=substitute(subset),
-		control.name=substitute(control),
-		can.use.reml=FALSE,
-		force.reml=FALSE,
-		env=parent.frame(),
-		dots=list(...)
-	)
+	p <- buildmer.prep(match.call(),add=list(fit=fit.multinom),banned=c('family','calc.anova','ddf'))
 	p <- buildmer.fit(p)
 	buildmer.finalize(p)
 }

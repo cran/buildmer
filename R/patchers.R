@@ -1,77 +1,116 @@
-run <- function (fun,args) withCallingHandlers(try(do.call(fun,args)),warning=function (w) invokeRestart('muffleWarning'))
+run <- function (fun,args,quiet) {
+	if (quiet) {
+		suppressMessages(suppressWarnings(try(do.call(fun,args),silent=TRUE)))
+	} else {
+		suppressWarnings(try(do.call(fun,args)))
+	}
+}
 
 patch.GLMMadaptive <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	model$call[[1]] <- name
-	model$call$data <- p$data.name
-	model$call$family <- p$family.name
-	if (!is.null(model$call$control)) model$call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	model$call[[1]]    <- name
+	model$call$data    <- p$call$data
+	model$call$family  <- p$call$family
+	model$call$control <- p$call$dots$control
+	model$call$weights <- p$call$dots$weights
+	model$call$offset  <- p$call$dots$offset
 	model
 }
 
 patch.gamm <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	model$lme$call[[1]] <- name
-	model$lme$call$data <- p$data.name
-	if (!is.null(model$lme$call$family))  model$lme$call$family  <- p$family.name
-	if (!is.null(model$lme$call$subset))  model$lme$call$subset  <- p$subset.name
-	if (!is.null(model$lme$call$control)) model$lme$call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	model$lme$call[[1]]    <- name
+	model$lme$call$data    <- p$call$data
+	model$lme$call$family  <- p$call$family
+	model$lme$call$subset  <- p$call$dots$subset
+	model$lme$call$control <- p$call$dots$control
+	model$lme$call$weights <- p$call$dots$weights
+	model$lme$call$offset  <- p$call$dots$offset
 	model
 }
 
 patch.gamm4 <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	model$mer@call[[1]] <- name
-	model$mer@call$data <- p$data
-	if (!is.null(model$mer@call$family))  model$mer@call$family  <- p$family.name
-	if (!is.null(model$mer@call$subset))  model$mer@call$subset  <- p$subset.name
-	if (!is.null(model$mer@call$control)) model$mer@call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	model$mer@call[[1]]    <- name
+	model$mer@call$data    <- p$data
+	model$mer@call$family  <- p$call$family
+	model$mer@call$subset  <- p$call$dots$subset
+	model$mer@call$control <- p$call$dots$control
+	model$mer@call$weights <- p$call$dots$weights
+	model$mer@call$offset  <- p$call$dots$offset
 	model
 }
 
 patch.lm <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	model$call[[1]] <- name
-	model$call$data <- p$data.name
-	if (!is.null(model$call$family))  model$call$family  <- p$family.name
-	if (!is.null(model$call$subset))  model$call$subset  <- p$subset.name
-	if (!is.null(model$call$control)) model$call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	model$call[[1]]    <- name
+	model$call$data    <- p$call$data
+	model$call$subset  <- p$call$dots$subset
+	model$call$control <- p$call$dots$control
+	model$call$weights <- p$call$dots$weights
+	model$call$offset  <- p$call$dots$offset
+	if (!p$is.gaussian) {
+		model$call$family <- p$call$family
+	}
 	model
 }
 
 patch.lmer <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	model@call[[1]] <- name
-	model@call$data <- p$data.name
-	if (!is.null(model@call$family))  model@call$family  <- p$family.name
-	if (!is.null(model@call$subset))  model@call$subset  <- p$subset.name
-	if (!is.null(model@call$control)) model@call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	model@call[[1]]    <- name
+	model@call$data    <- p$call$data
+	model@call$subset  <- p$call$dots$subset
+	model@call$control <- p$call$dots$control
+	model@call$weights <- p$call$dots$weights
+	model@call$offset  <- p$call$dots$offset
+	if (!p$is.gaussian) {
+		model@call$family <- p$call$family
+	}
 	model
 }
 
-patch.mertree <- function (p,eltname,fun,args) {
+patch.mertree <- function (p,fun,args) {
 	name <- substitute(fun)
-	model <- run(fun,args)
-	if (inherits(model,'try-error')) return(model)
-	if (!converged(model[[eltname]])) return(model[[eltname]])
-	model$call$data <- p$data.name
-	ctrl <- paste0(eltname,'.control')
-	if (!is.null(model$call$family))  model$call$family  <- p$family.name
-	if (!is.null(model$call$subset))  model$call$subset  <- p$subset.name
-	if (!is.null(model$call[[ctrl]])) model$call[[ctrl]] <- p$control.name
-	model[[eltname]]@call$data <- p$data.name
-	if (!is.null(model[[eltname]]@call$family))  model[[eltname]]@call$family  <- p$family.name
-	if (!is.null(model[[eltname]]@call$subset))  model[[eltname]]@call$subset  <- p$subset.name
-	if (!is.null(model[[eltname]]@call$control)) model[[eltname]]@call$control <- p$control.name
+	model <- run(fun,args,p$quiet)
+	if (inherits(model,'try-error')) {
+		return(model)
+	}
+	eltname <- if (p$is.gaussian) 'lmer' else 'glmer'
+	if (!converged(model[[eltname]])) {
+		return(model[[eltname]])
+	}
+	model$call$data    <- p$call$data
+	model$call$subset  <- p$call$dots$subset
+	model$call$ctrl    <- p$call$dots$control
+	model$call$weights <- p$call$dots$weights
+	model$call$offset  <- p$call$dots$offset
+	model[[eltname]]@call$data    <- p$call$data
+	model[[eltname]]@call$subset  <- p$call$dots$subset
+	model[[eltname]]@call$control <- if (p$is.gaussian) p$call$dots$lmer.control else p$call$dots$glmer.control
+	model[[eltname]]@call$weights <- p$call$dots$weights
+	model[[eltname]]@call$offset  <- p$call$dots$offset
+	if (!p$is.gaussian) {
+		model$call$family <- model[[eltname]]@call$family <- p$call$family
+	}
 	model
 }

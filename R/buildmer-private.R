@@ -2,17 +2,17 @@ buildmer.fit <- function (p) {
 	# Formula
 	if (is.data.frame(p$formula)) {
 		p$tab <- p$formula
-		if (is.null(p$dots$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
-		p$dep <- p$dots$dep
+		if (is.null(p$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
 		p$formula <- build.formula(p$dep,p$tab,p$env)
-		p$dots$dep <- NULL
 	} else {
 		p$dep <- as.character(p$formula[2])
 		p$tab <- tabulate.formula(p$formula)
 	}
 
 	# Include
-	if (!is.null(p$include) && 'formula' %in% class(p$include)) p$include <- tabulate.formula(p$include)
+	if (!is.null(p$include) && 'formula' %in% class(p$include)) {
+		p$include <- tabulate.formula(p$include)
+	}
 
 	# REML
 	if (!is.null(p$dots$REML)) {
@@ -23,39 +23,32 @@ buildmer.fit <- function (p) {
 			# Force off
 			p$can.use.reml <- FALSE
 		}
-		# else: it's NA --> use default:
+		# else: it's NA --> use default
 		p$dots$REML <- NULL
 	} else {
 		# Default case, in which case one optimization can be applied:
-		if (all(p$crit.name %in% c('deviance','devexp'))) {
+		if (all(p$crit.name %in% c('deviance','devexp','F'))) {
 			p$can.use.reml <- FALSE
 			p$force.reml <- TRUE
 		}
 	}
 
-	# For user debugging. The below comment will be found even if just printing the parsed R code:
-	'If you found this piece of code, congratulations: you can now override the internal buildmer parameter list!'
-	if ('p' %in% names(p$dots)) {
-		p <- c(p,p$dots$p)
-		p$dots$p <- NULL
-	}
-
 	# Parallel
-	if (is.null(p$cluster)) {
+	if (is.null(p$cl)) {
 		p$parallel <- FALSE
 		p$parply <- lapply
 		cleanup.cluster <- FALSE
 	} else {
 		p$parallel <- TRUE
-		p$parply <- function (x,fun,...) parallel::parLapply(p$cluster,x,fun,...)
-		p$env <- .GlobalEnv
+		p$parply <- function (x,fun,...) parallel::parLapply(p$cl,x,fun,...)
 		if (is.numeric(p$cluster)) {
-			p$cluster <- parallel::makeCluster(p$cluster,outfile='')
+			p$cl <- parallel::makeCluster(p$cl,outfile='')
 			cleanup.cluster <- TRUE
 		} else {
 			cleanup.cluster <- FALSE
 		}
-		parallel::clusterExport(p$cluster,privates,environment())
+		p$privates <- ls(getNamespace('buildmer'),all.names=TRUE)
+		parallel::clusterExport(p$cluster,p$privates,environment())
 	}
 
 	# Let's go
@@ -69,19 +62,19 @@ buildmer.fit <- function (p) {
 		}
 		if (length(p$direction)) {
 			for (i in 1:length(p$direction)) {
-				p <- do.call(p$direction[i],list(p=within.list(p,{ crit <- crits[[i]] })))
+				p <- do.call(p$direction[[i]],list(p=within.list(p,{ crit <- crits[[i]] })))
 			}
 		}
-		if ('LRT' %in% p$crit.name && 'LRT' %in% names(p$results)) {
-			p$results$LRT <- exp(p$results$LRT)
+		if (any(i <- names(p$results) %in% c('LRT','F'))) {
+			p$results[,i] <- exp(p$results[,i])
 		}
 	}
 	if (is.null(p$model)) {
-		message('Fitting the final model')
+		progress(p,'Fitting the final model')
 		p$model <- p$parply(list(p),p$fit,p$formula)[[1]]
 	}
 	if (cleanup.cluster) {
-		parallel::stopCluster(p$cluster)
+		parallel::stopCluster(p$cl)
 	}
 	p
 }
@@ -89,10 +82,17 @@ buildmer.fit <- function (p) {
 buildmer.finalize <- function (p) {
 	ret <- mkBuildmer(model=p$model,p=p)
 	ret@p$in.buildmer <- TRUE
-	if (p$calc.anova) ret@anova <- anova.buildmer(ret,ddf=p$ddf)
-	if (p$calc.summary) ret@summary <- summary.buildmer(ret,ddf=p$ddf)
+	if (p$calc.anova) {
+		ret@anova <- anova.buildmer(ret,ddf=p$ddf)
+	}
+	if (p$calc.summary) {
+		ret@summary <- summary.buildmer(ret,ddf=p$ddf)
+	}
+	if (!is.null(p$cl)) {
+		try(parallel::clusterCall(p$cl,rm,list=p$privates),silent=TRUE)
+		p$privates <- NULL
+	}
 	ret@p$in.buildmer <- FALSE
-	if (!is.null(p$cl)) try(parallel::clusterCall(p$cl,rm,list=privates),silent=TRUE)
 	ret
 }
 
@@ -111,7 +111,7 @@ calcWald <- function (table,col.ef,col.df=0) {
 
 check.ddf <- function (ddf) {
 	if (is.null(ddf)) return('Wald')
-	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger','KR')
+	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger','KR','S')
 	i <- pmatch(ddf,valid)
 	if (is.na(i)) {
 		warning("Invalid ddf specification, possible options are 'Wald', 'lme4', 'Satterthwaite', 'Kenward-Roger'")
@@ -126,6 +126,9 @@ check.ddf <- function (ddf) {
 	if (ddf == 'KR') {
 		ddf <- 'Kenward-Roger'
 	}
+	if (ddf == 'S') {
+		ddf <- 'Satterthwaite'
+	}
 	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=TRUE)) {
 		warning('pbkrtest package is not available, could not calculate Kenward-Roger denominator degrees of freedom')
 		return('lme4')
@@ -134,11 +137,6 @@ check.ddf <- function (ddf) {
 }
 
 has.smooth.terms <- function (formula) length(mgcv::interpret.gam(formula)$smooth.spec) > 0
-is.gaussian <- function (family) {
-	if (is.character(family)) family <- get(family)
-	if (is.function (family)) family <- family()
-	family$family == 'gaussian' && family$link == 'identity'
-}
 is.smooth.term <- function (term) has.smooth.terms(mkForm(list(term)))
 is.random.term <- function (term) {
 	term <- mkTerm(term)
@@ -147,19 +145,17 @@ is.random.term <- function (term) {
 	if (term[[1]] == '(' && term[[2]][[1]] == '|') return(TRUE)
 	FALSE
 }
-mkCrit <- function (crit) if (is.function(crit)) crit else get(paste0('crit.',crit))
-mkCritName <- function (crit) if (is.function(crit)) 'custom' else crit
-mkElim <- function (crit) if (is.function(crit)) crit else get(paste0('elim.',crit))
-mkForm <- function (term,env=parent.frame()) stats::as.formula(paste0('~',term),env=env)
+mkForm <- function (term) stats::as.formula(paste0('~',term))
 mkTerm <- function (term) mkForm(term)[[2]]
-privates <- c('p','build.formula','can.remove','fit.buildmer','has.smooth.terms','is.gaussian','patch.gamm4','patch.lm','patch.lmer','patch.mertree','re2mgcv','run','tabulate.formula')
 
-progress <- function (...) {
+progress <- function (p,...) {
 	text <- sapply(list(...),function (x) as.character(list(x)))
 	text <- paste0(text,collapse='')
 	text <- strwrap(text,exdent=4)
 	text <- paste0(text,collapse='\n')
-	message(text)
+	if (!p$quiet) {
+		message(text)
+	}
 	text
 }
 

@@ -1,13 +1,10 @@
 backward <- function (p) {
 	fit.references.parallel <- function (p) {
-		if (p$parallel) parallel::clusterExport(p$cl,'p',environment())
-		progress('Fitting ML and REML reference models')
+		progress(p,'Fitting ML and REML reference models')
+		plist <- list(within(p, REML <- TRUE),within(p, REML <- FALSE))
 		repeat {
-			res <- p$parply(c(TRUE,FALSE),function (x) {
-				p$reml <- x
-				p$fit(p,p$formula)
-			})
-			conv <- lapply(res,converged)
+			res <- p$parply(plist,p$fit,p$formula)
+			conv <- lapply(res,converged,p$singular.ok,p$grad.tol,p$hess.tol)
 			if (all(unlist(conv))) {
 				p$cur.reml <- res[[1]]
 				p$cur.ml <- res[[2]]
@@ -27,9 +24,6 @@ backward <- function (p) {
 			p$tab[,p$crit.name] <- rep(NA,nrow(p$tab))
 		}
 	}
-	if (p$parallel) {
-		parallel::clusterExport(p$cl,c('converged','build.formula','unravel','can.remove','get2LL','getdf'),environment())
-	}
 
 	iter <- 0
 	repeat {
@@ -42,10 +36,10 @@ backward <- function (p) {
 			p <- fit.references.parallel(p)
 		} else {
 			if (need.ml && is.null(p$cur.ml)) {
-				progress('Fitting ML reference model')
+				progress(p,'Fitting ML reference model')
 				p$reml <- FALSE
 				p$cur.ml <- p$fit(p,p$formula)
-				conv <- converged(p$cur.ml)
+				conv <- converged(p$cur.ml,p$singular.ok,p$grad.tol,p$hess.tol)
 				if (!conv) {
 					p <- reduce.model(p,conv)
 					if (!any(!is.na(p$tab$block))) return(p)
@@ -53,10 +47,10 @@ backward <- function (p) {
 				}
 			}
 			if (need.reml && is.null(p$cur.reml)) {
-				progress('Fitting REML reference model')
+				progress(p,'Fitting REML reference model')
 				p$reml <- TRUE
 				p$cur.reml <- p$fit(p,p$formula)
-				conv <- converged(p$cur.reml)
+				conv <- converged(p$cur.reml,p$singular.ok,p$grad.tol,p$hess.tol)
 				if (!conv) {
 					p <- reduce.model(p,conv)
 					if (!any(!is.na(p$tab$block))) return(p)
@@ -66,10 +60,10 @@ backward <- function (p) {
 		}
 
 		if (!nrow(p$tab)) {
-			progress("There's nothing left!")
+			progress(p,"There's nothing left!")
 			return(p)
 		}
-		progress('Testing terms')
+		progress(p,'Testing terms')
 		results <- p$parply(unique(p$tab$block),function (b) {
 			if (is.na(b)) {
 				# cannot remove term because of 'include'
@@ -89,7 +83,7 @@ backward <- function (p) {
 			}
 			f.alt <- build.formula(p$dep,p$tab[-i,],p$env)
 			m.alt <- p$fit(p,f.alt)
-			val <- if (converged(m.alt)) p$crit(p,m.alt,m.cur) else NaN
+			val <- if (converged(m.alt,p$singular.ok,p$grad.tol,p$hess.tol)) p$crit(p,m.alt,m.cur) else NaN
 			val <- rep(val,length(i))
 			list(val=val,model=m.alt)
 		})
@@ -105,7 +99,7 @@ backward <- function (p) {
 		remove <- p$elim(results)
 		remove <- which(!is.na(remove) & !is.nan(remove) & remove)
 		if (length(remove) == 0) {
-			progress('All terms are significant')
+			progress(p,'All terms are significant')
 			p$model <- if (need.reml) p$cur.reml else p$cur.ml
 			return(p)
 		}
@@ -119,7 +113,7 @@ backward <- function (p) {
 			# Recycle the current model as the next reference model
 			p[[if (p$reml) 'cur.reml' else 'cur.ml']] <- results[[remove]]$model
 		}
-		progress('Updating formula: ',p$formula)
+		progress(p,'Updating formula: ',p$formula)
 	}
 }
 
@@ -237,7 +231,7 @@ order <- function (p) {
 		repeat {
 			have <- p$tab
 			cur <- p$fit(p,build.formula(p$dep,have,p$env))
-			conv <- converged(cur)
+			conv <- converged(cur,p$singular.ok,p$grad.tol,p$hess.tol)
 			if (conv) break
 			p <- reduce.model(p,conv)
 			if (!any(!is.na(p$tab$block))) return(p)
@@ -252,27 +246,26 @@ order <- function (p) {
 			check <- can.eval(check)
 			check <- check[check$ok,]
 			if (!nrow(check)) {
-				progress('Could not proceed ordering terms')
+				progress(p,'Could not proceed ordering terms')
 				p$tab <- have
 				p$model <- cur
 				return(p)
 			}
-			progress(paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
-			if (p$parallel) parallel::clusterExport(p$cluster,c('check','have','p'),environment())
-			mods <- p$parply(unique(check$block),function (b) {
+			progress(p,paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
+			mods <- p$parply(unique(check$block),function (b,check,have,p) {
 				check <- check[check$block == b,]
 				tab <- rbind(have[,c('index','grouping','term')],check[,c('index','grouping','term')])
 				form <- build.formula(p$dep,tab,p$env)
 				mod <- list(p$fit(p,form))
 				rep(mod,nrow(check))
-			})
+			},check,have,p)
 			mods <- unlist(mods,recursive=FALSE)
-			check$score <- sapply(mods,function (mod) if (converged(mod)) p$crit(p,cur,mod) else NaN)
+			check$score <- sapply(mods,function (mod) if (converged(mod,p$singular.ok,p$grad.tol,p$hess.tol)) p$crit(p,cur,mod) else NaN)
 			ok <- Filter(function (x) !is.na(x) & !is.nan(x),check$score)
 			if (!length(ok)) {
-				statuses <- sapply(mods,function (mod) attr(converged(mod),'reason'))
+				statuses <- sapply(mods,function (mod) attr(converged(mod,p$singular.ok,p$grad.tol,p$hess.tol),'reason'))
 				statuses <- statuses[!is.na(statuses)]
-				progress('None of the models converged - giving up ordering attempt. The types of convergence failure are:\n',paste(unique(statuses),collapse='\n    '))
+				progress(p,'Ending the ordering procedure due to having reached the maximal feasible model - all higher models failed to converge. The types of convergence failure are:\n',paste(unique(statuses),collapse='\n    '))
 				p$tab <- have
 				p$model <- cur
 				return(p)
@@ -286,18 +279,18 @@ order <- function (p) {
 				# needs an extra fit to obtain the new 'current' model.
 				form <- build.formula(p$dep,have,p$env)
 				cur <- p$fit(p,form)
-				conv <- conv(cur)
+				conv <- conv(cur,p$singular.ok,p$grad.tol,p$hess.tol)
 				if (!conv) {
-					progress('The reference model for the next step failed to convergederge - giving up ordering attempt.\nThe failure was: ',attr(conv,'reason'))
+					progress(p,'The reference model for the next step failed to converge - giving up ordering attempt.\nThe failure was: ',attr(conv,'reason'))
 					return(p)
 				}
 			}
-			progress('Updating formula: ',build.formula(p$dep,have))
+			progress(p,'Updating formula: ',build.formula(p$dep,have,p$env))
 		}
 	}
 
-	progress('Determining predictor order')
-	if (is.null(p$tab)) p$tab <- tabulate.formula(p$formula) else p$tab$ok <- p$tab$score <- NULL
+	progress(p,'Determining predictor order')
+	p$tab$ok <- p$tab$score <- NULL
 	tab <- p$tab
 	fxd <- is.na(tab$grouping)
 	if ('1' %in% tab[fxd,'term']) {
@@ -321,10 +314,10 @@ order <- function (p) {
 
 reduce.model <- function (p,conv) {
 	if (length(conv) == 1) {
-		progress('Convergence failure. Reducing terms and retrying...\nThe failure was: ',attr(conv,'reason'))
+		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failure was: ',attr(conv,'reason'))
 	} else {
 		statuses <- sapply(conv,function (x) attr(x,'reason'))
-		progress('Convergence failure. Reducing terms and retrying...\nThe failures were: ',paste(unique(statuses),collapse='\n    '))
+		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failures were: ',paste(unique(statuses),collapse='\n    '))
 	}
 	cands <- p$tab$block[!is.na(p$tab$block)]
 	if (length(unique(cands)) < 2) {

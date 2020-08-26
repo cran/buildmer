@@ -10,13 +10,23 @@
 #' add.terms(form,c('many','more|terms','to|terms','(be|added)','to|test'))
 #' @export
 add.terms <- function (formula,add) {
-	dep <- if (length(formula) < 3) '' else as.character(formula[2])
-	terms <- terms(formula,keep.order=TRUE)
+	dep       <- if (length(formula) < 3) '' else as.character(formula[2])
+	terms     <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
-	terms <- attr(terms,'term.labels')
+	offset    <- attr(terms,'offset')
+	vars      <- attr(terms,'variables')
+	terms     <- attr(terms,'term.labels')
+	terms     <- c(intercept,terms)
+	if (!is.null(offset)) {
+		offset.term <- as.character(list(vars[[1+offset]]))
+		terms <- c(offset.term,terms)
+	}
+
 	fixed.terms <- Filter(Negate(is.random.term),terms)
 	random.terms <- Filter(is.random.term,terms)
-	if (length(random.terms)) random.terms <- sapply(random.terms,function (x) if (mkTerm(x)[[1]] != '(') paste0('(',x,')') else x)
+	if (length(random.terms)) {
+		random.terms <- sapply(random.terms,function (x) if (mkTerm(x)[[1]] != '(') paste0('(',x,')') else x)
+	}
 
 	for (term in add) {
 		if (is.random.term(term)) {
@@ -53,7 +63,7 @@ add.terms <- function (formula,add) {
 			}
 		} else fixed.terms <- c(fixed.terms,term)
 	}
-	terms <- c(as.numeric(intercept),fixed.terms,random.terms)
+	terms <- c(fixed.terms,random.terms)
 	stats::as.formula(paste0(dep,'~',paste0(terms,collapse='+')),environment(formula))
 }
 
@@ -103,6 +113,8 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 #' Test a model for convergence
 #' @param model The model object to test.
 #' @param singular.ok A logical indicating whether singular fits are accepted as `converged' or not. Relevant only for lme4 models.
+#' @param grad.tol The tolerance to use for checking the gradient. This is currently only used by mgcv, glmmTMB, and clm(m) models.
+#' @param hess.tol The tolerance to use for checking the Hessian for negative eigenvalues. This is currently only used by mgcv, glmmTMB, and clm(m) models.
 #' @return Logical indicating whether the model converged.
 #' @examples
 #' library(buildmer)
@@ -113,7 +125,7 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 #'             optimizer='bobyqa',optCtrl=list(maxfun=1)))
 #' sapply(list(good1,good2,bad),converged)
 #' @export
-converged <- function (model,singular.ok=FALSE) {
+converged <- function (model,singular.ok=FALSE,grad.tol=.04,hess.tol=.002) {
 	setattr <- function (x,msg,err=NULL) {
 		if (!is.null(err)) msg <- paste0(msg,' (',err,')')
 		attr(x,'reason') <- msg
@@ -123,25 +135,37 @@ converged <- function (model,singular.ok=FALSE) {
 	success <- function (msg,err=NULL) setattr(TRUE,msg,err)
 	if (inherits(model,'try-error')) return(failure(model))
 	if (inherits(model,'gam')) {
-		if (!is.null(model$outer.info)) {
-			if (!is.null(model$outer.info$conv) && (err <- model$outer.info$conv) != 'full convergence') return(failure('mgcv outer convergence failed',err))
-			if ((err <- max(abs(model$outer.info$grad))) > .04) return(failure('Absolute gradient contains values >0.04',err))
-			ev <- try(eigen(model$outer.info$hess)$values,silent=TRUE)
-			if (inherits(ev,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',ev))
-			if ((err <- min(ev)) < -.002) return(failure('Hessian contains negative eigenvalues <-0.002',err))
-		} else {
+		if (is.null(model$outer.info)) {
 			if (!length(model$sp)) return(success('No smoothing parameters to optimize'))
-			if (!model$mgcv.conv$fully.converged) return(failure('mgcv reports outer convergence failed'))
-			if ((err <- model$mgcv.conv$rms.grad) > .04) return(failure('mgcv reports absolute gradient containing values >0.04',err))
+			if (!model$mgcv.conv$fully.converged) return(failure('mgcv reports nonconvergence'))
+			if ((err <- model$mgcv.conv$rms.grad) > grad.tol) return(failure(paste0('mgcv reports absolute gradient containing values >',grad.tol),err))
 			if (!model$mgcv.conv$hess.pos.def) return(failure('mgcv reports non-positive-definite Hessian'))
+			return(success('All buildmer checks passed (gam with outer iteration)'))
+		} else {
+			if (!is.null(model$outer.info$conv) && (err <- model$outer.info$conv) != 'full convergence') return(failure('mgcv reports nonconvergence',err))
+			if (!is.null(model$outer.info$grad) && (err <- max(abs(model$outer.info$grad))) > grad.tol)  return(failure(paste0('Absolute gradient contains values >',grad.tol),err))
+			if (!is.null(model$outer.info$hess)) {
+				err <- try(min(eigen(model$outer.info$hess)$values),silent=TRUE)
+				if (inherits(err,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',err))
+				if (err < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
+			}
+			return(success('All buildmer checks passed (gam with PQL)'))
 		}
-		return(success('All buildmer checks passed (gam)'))
 	}
 	if (inherits(model,'merMod')) {
 		if ((err <- model@optinfo$conv$opt) != 0) return(failure('Optimizer reports not having finished',err))
-		if (!length(model@optinfo$conv$lme4)) return(success('No lme4 info available -- succeeding by default (dangerous)'))
-		if (is.null(model@optinfo$conv$lme4$code)) return(setattr(singular.ok,'Singular fit'))
+		if (!length(model@optinfo$conv$lme4)) return(success('No lme4 info available -- succeeding by default (dangerous!)'))
+		if (is.null(model@optinfo$conv$lme4$code) && !singular.ok) return(failure('Singular fit'))
 		if (any((err <- model@optinfo$conv$lme4$code) != 0)) return(failure('lme4 reports not having converged',err))
+		if (is.null(model@optinfo$derivs)) return(success('No derivative information available -- succeeding by default (dangerous!)'))
+		grad <- model@optinfo$derivs$gradient
+		hess <- model@optinfo$derivs$Hessian
+		scaled.grad <- try(solve(hess,grad),silent=TRUE)
+		if (inherits(scaled.grad,'try-error')) return(failure('Manual gradient checks were unable to compute scaled gradient',ev))
+		if ((err <- max(pmin(abs(scaled.grad),abs(grad)))) > grad.tol) return(failure(paste0('Gradient contains found values >',grad.tol),err))
+		err <- try(min(eigen(hess)$values),silent=TRUE)
+		if (inherits(err,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',err))
+		if (err < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
 		return(success('All buildmer checks passed (merMod)'))
 	}
 	if (inherits(model,'glmmTMB')) {
@@ -149,9 +173,10 @@ converged <- function (model,singular.ok=FALSE) {
 		if (!is.null(model$sdr$pdHess)) {
 			if (!model$sdr$pdHess) return(failure('glmmTMB reports non-positive-definite Hessian'))
 			if (sum(dim(model$sdr$cov.fixed))) {
+				if ((err <- max(abs(model$sdr$gradient.fixed))) > grad.tol) return(failure(paste0('Absolute gradient contains values >',grad.tol),err))
 				ev <- try(1/eigen(model$sdr$cov.fixed)$values,silent=TRUE)
 				if (inherits(ev,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',ev))
-				if ((err <- min(ev)) < -.002) return(failure('Hessian contains negative eigenvalues <-0.002',err))
+				if ((err <- min(ev)) < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
 			}
 		}
 		return(success('All buildmer checks passed (glmmTMB)'))
@@ -161,15 +186,15 @@ converged <- function (model,singular.ok=FALSE) {
 	if (inherits(model,'clm') || inherits(model,'clmm')) {
 		if (inherits(model,'clm')) {
 			if (model$convergence$code != 0) return(failure('clm reports nonconvergence',model$messages))
-			if (model$maxGradient > .04)     return(failure('Absolute gradient contains values > .04',model$maxGradient))
+			if (model$maxGradient > grad.tol) return(failure(paste0('Absolute gradient contains values >',grad.tol),model$maxGradient))
 		}
 		if (inherits(model,'clmm')) {
-			if (model$optRes$convergence != 0)           return(failure('clmm reports nonconvergence',model$optRes$message))
-			if ((err <- max(abs(model$gradient))) > .04) return(failure('Absolute gradient contains values > .04',err))
+			if (model$optRes$convergence != 0) return(failure('clmm reports nonconvergence',model$optRes$message))
+			if ((err <- max(abs(model$gradient))) > grad.tol) return(failure(paste0('Absolute gradient contains values >',grad.tol),err))
 		}
 		ev <- try(eigen(model$Hessian)$values,silent=TRUE)
 		if (inherits(ev,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',ev))
-		if ((err <- min(ev)) < -.002) return(failure('Hessian contains negative eigenvalues <-0.002',err))
+		if ((err <- min(ev)) < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
 		return(success('All buildmer checks passed (clm/clmm)'))
 	}
 	success('No checks needed or known for this model type',class(model))
@@ -187,6 +212,7 @@ converged <- function (model,singular.ok=FALSE) {
 #' re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)
 #' @export
 re2mgcv <- function (formula,data) {
+	e <- environment(formula)
 	dep <- as.character(formula[[2]])
 	data <- data[!is.na(data[[dep]]),]
 	formula <- tabulate.formula(formula)
@@ -199,7 +225,7 @@ re2mgcv <- function (formula,data) {
 		data[[g]] <- factor(data[[g]])
 		tab <- random[random$grouping == g,]
 		tab$index <- tab$grouping <- NA
-		f <- build.formula(dep,tab)
+		f <- build.formula(dep,tab,e)
 		terms <- model.matrix(f,data)
 		nms <- gsub('[():]','_',colnames(terms))
 		for (i in 1:ncol(terms)) {
@@ -214,7 +240,7 @@ re2mgcv <- function (formula,data) {
 			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=FALSE)
 		}			
 	}
-	formula <- build.formula(dep,formula)
+	formula <- build.formula(dep,formula,e)
 	list(formula=formula,data=data)
 }
 
@@ -375,11 +401,19 @@ tabulate.formula <- function (formula,group=NULL) {
 		t
 	}
 
-	dep <- as.character(formula[2])
-	terms <- terms(formula,keep.order=TRUE)
+	dep       <- as.character(formula[2])
+	terms     <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
-	terms <- attr(terms,'term.labels')
-	if (intercept) terms <- c('1',terms)
+	offset    <- attr(terms,'offset')
+	vars      <- attr(terms,'variables')
+	terms     <- attr(terms,'term.labels')
+	if (intercept) {
+		terms <- c('1',terms)
+	}
+	if (!is.null(offset)) {
+		offset.term <- as.character(list(vars[[1+offset]]))
+		terms <- c(offset.term,terms)
+	}
 
 	# Build lists to check which terms are currently present.
 	fixed.terms  <- Filter(Negate(is.random.term),terms)
@@ -393,15 +427,23 @@ tabulate.formula <- function (formula,group=NULL) {
 			terms <- lapply(1:length(terms),function (j) {
 				g <- names(terms)[j]
 				terms <- terms[[j]]
-				if (!length(terms)) return(NULL)
+				if (!length(terms)) {
+					return(NULL)
+				}
 				ix <- paste(i,j)
 				data.frame(index=ix,grouping=g,term=terms,code=paste(ix,g,terms),block=paste(NA,g,mkGroups(terms)),stringsAsFactors=FALSE)
 			})
 			terms <- Filter(Negate(is.null),terms)
-			if (!length(terms)) return(NULL)
+			if (!length(terms)) {
+				return(NULL)
+			}
 			do.call(rbind,terms)
-		} else data.frame(index=NA,grouping=NA,term=term,code=term,block=paste(NA,NA,mkGroups(term)),stringsAsFactors=FALSE)
+		} else {
+			data.frame(index=NA,grouping=NA,term=term,code=term,block=paste(NA,NA,mkGroups(term)),stringsAsFactors=FALSE)
+		}
 	})
 	terms <- Filter(Negate(is.null),terms)
-	do.call(rbind,terms)
+	tab <- do.call(rbind,terms)
+	environment(tab) <- environment(formula)
+	tab
 }

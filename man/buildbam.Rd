@@ -8,12 +8,7 @@ buildbam(
   formula,
   data = NULL,
   family = gaussian(),
-  cl = NULL,
-  direction = c("order", "backward"),
-  crit = "LRT",
-  include = NULL,
-  calc.anova = FALSE,
-  calc.summary = TRUE,
+  buildmerControl = buildmerControl(),
   ...
 )
 }
@@ -24,19 +19,9 @@ buildbam(
 
 \item{family}{See the general documentation under \code{\link{buildmer-package}}}
 
-\item{cl}{See the general documentation under \code{\link{buildmer-package}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
 
-\item{direction}{See the general documentation under \code{\link{buildmer-package}}}
-
-\item{crit}{See the general documentation under \code{\link{buildmer-package}}}
-
-\item{include}{See the general documentation under \code{\link{buildmer-package}}}
-
-\item{calc.anova}{See the general documentation under \code{\link{buildmer-package}}}
-
-\item{calc.summary}{See the general documentation under \code{\link{buildmer-package}}}
-
-\item{...}{Additional options to be passed to \code{bam}}
+\item{...}{Additional options to be passed to \code{bam}; for backward-compatibility reasons, will also accept buildmer control parameters, although those specified in \code{buildmerControl} will take precedence}
 }
 \description{
 Use \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}
@@ -51,7 +36,7 @@ As \code{bam} uses PQL, only \code{crit='deviance'} is supported for non-Gaussia
 \examples{
 \dontshow{
 library(buildmer)
-model <- buildbam(f1 ~ s(timepoint,bs='cr'),data=vowels)
+model <- buildbam(f1 ~ s(timepoint,bs='cr'),data=vowels,buildmerControl=list(discrete=TRUE))
 }
 \donttest{
 library(buildmer)
