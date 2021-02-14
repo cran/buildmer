@@ -15,16 +15,12 @@ buildmer.fit <- function (p) {
 	}
 
 	# REML
-	if (!is.null(p$dots$REML)) {
-		if (isTRUE(p$dots$REML)) {
-			# Force on
-			p$force.reml <- TRUE
-		} else if (isFALSE(p$dots$REML)) {
-			# Force off
-			p$can.use.reml <- FALSE
-		}
-		# else: it's NA --> use default
-		p$dots$REML <- NULL
+	if (isTRUE(p$REML)) {
+		# Force on
+		p$force.reml <- TRUE
+	} else if (isFALSE(p$REML)) {
+		# Force off
+		p$can.use.reml <- FALSE
 	} else {
 		# Default case, in which case one optimization can be applied:
 		if (all(p$crit.name %in% c('deviance','devexp','F'))) {
@@ -47,8 +43,6 @@ buildmer.fit <- function (p) {
 		} else {
 			cleanup.cluster <- FALSE
 		}
-		p$privates <- ls(getNamespace('buildmer'),all.names=TRUE)
-		parallel::clusterExport(p$cluster,p$privates,environment())
 	}
 
 	# Let's go
@@ -87,10 +81,6 @@ buildmer.finalize <- function (p) {
 	}
 	if (p$calc.summary) {
 		ret@summary <- summary.buildmer(ret,ddf=p$ddf)
-	}
-	if (!is.null(p$cl)) {
-		try(parallel::clusterCall(p$cl,rm,list=p$privates),silent=TRUE)
-		p$privates <- NULL
 	}
 	ret@p$in.buildmer <- FALSE
 	ret
