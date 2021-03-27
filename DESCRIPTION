@@ -1,7 +1,7 @@
 Package: buildmer
 Title: Stepwise Elimination and Term Reordering for Mixed-Effects
         Regression
-Version: 1.8
+Version: 1.9
 Authors@R: person(c("Cesko", "C."), "Voeten", email = "cvoeten@gmail.com", role = c("aut", "cre"), comment = c(ORCID="0000-0003-4687-9973"))
 Description: Finds the largest possible regression model that will still converge
     for various types of regression analyses (including mixed models and generalized
@@ -13,7 +13,7 @@ Depends: R (>= 3.2)
 Imports: graphics, lme4, methods, mgcv, nlme, plyr, stats, utils
 Suggests: GLMMadaptive, MASS, gamm4, glmertree, glmmTMB, knitr,
         lmerTest, nnet, ordinal, parallel, partykit, pbkrtest,
-        rmarkdown
+        rmarkdown, testthat
 License: FreeBSD
 Encoding: UTF-8
 LazyData: true
@@ -21,8 +21,8 @@ RoxygenNote: 7.1.1
 BugReports: https://github.com/cvoeten/buildmer/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2021-02-14 14:40:46 UTC; Cesko
+Packaged: 2021-03-27 09:37:51 UTC; Cesko
 Author: Cesko C. Voeten [aut, cre] (<https://orcid.org/0000-0003-4687-9973>)
 Maintainer: Cesko C. Voeten <cvoeten@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-02-14 19:00:02 UTC
+Date/Publication: 2021-03-27 11:40:02 UTC

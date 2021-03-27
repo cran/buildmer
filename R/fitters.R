@@ -14,10 +14,15 @@ fit.bam <- function (p,formula) {
 	p$data <- re$data
 	if (length(attr(stats::terms(formula),'term.labels')) == 0) {
 		# bam is unable to fit intercept-only models
-		formula <- add.terms(formula,c('intercept'))
+		formula <- add.terms(formula,'intercept')
 		p$data$intercept <- 1
 	}
-	method <- if (p$reml) 'fREML' else 'ML'
+	if (p$reml) {
+		method <- 'fREML'
+	} else {
+		method <- 'ML'
+		p$dots$discrete <- FALSE
+	}
 	progress(p,'Fitting via bam, with ',method,': ',formula)
 	patch.lm(p,mgcv::bam,c(list(formula=formula,family=p$family,data=p$data,method=method),p$dots))
 }
