@@ -17,7 +17,8 @@ f <- f1 ~ vowel*timepoint*following +
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
 #  library(lme4)
-#  m <- buildmer(f,data=vowels,control=lmerControl(optimizer='bobyqa'),buildmerControl=buildmerControl(direction='order'))
+#  m <- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction='order',
+#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
 
 ## ----echo=FALSE---------------------------------------------------------------------------------------------
 cat('Determining predictor order
@@ -149,7 +150,8 @@ m <- buildmer:::mkBuildmer(model=list(formula=(function () as.formula('f1 ~ foll
 (f <- formula(m@model))
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
-#  m <- buildmer(f,data=vowels,direction='backward',control=lmerControl(optimizer='bobyqa'))
+#  m <- buildmer(f,data=vowels,buildmerControl=list(direction='backward',
+#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
 
 ## ----echo=FALSE---------------------------------------------------------------------------------------------
 cat('Fitting ML and REML reference models
@@ -190,7 +192,7 @@ Finalizing by converting the model to lmerTest')
 
 ## ----echo=FALSE,message=FALSE-------------------------------------------------------------------------------
 f2 <- as.formula('f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + (1 + timepoint | word) + (1 + timepoint + following + timepoint:following | participant)',.GlobalEnv)
-m <- buildmer(f2,vowels,direction=NULL,control=lmerControl(optimizer='bobyqa'))
+m <- buildmer(f2,vowels,buildmerControl=list(direction=NULL,args=list(control=lmerControl(optimizer='bobyqa'))))
 
 ## -----------------------------------------------------------------------------------------------------------
 summary(m)
@@ -208,6 +210,7 @@ form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following +
 terms <- tabulate.formula(form,group='vowel[^:]')
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
-#  m <- buildmer(terms,data=vowels,control=lmerControl(optimizer='bobyqa'),buildmerControl=buildmerControl(dep='f1'))
+#  m <- buildmer(terms,data=vowels,buildmerControl=buildmerControl(dep='f1',
+#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
 #  ## (output not shown)
 

@@ -1,39 +1,47 @@
 get2LL <- function (m) as.numeric(-2*stats::logLik(m))
-getdf  <- function (m) attr(stats::logLik(m),'df') #note: for GAMs this automatically uses the sum of edf2
-getdev <- function (m) {
+getdevexp <- function (m) {
 	if (all(c('deviance','null.deviance') %in% names(m))) return(1-m$deviance/m$null.deviance)
-	if (!is.null(summary(m)$r.squared)) return(1-summary(m)$r.squared)
 	ff <- fitted(m)
-	if (attr(terms(formula(m)),'intercept')) ff <- ff - mean(ff)
 	rr <- resid(m)
-	1 - sum(ff^2)/(sum(ff^2)+sum(rr^2))
+	stats::cor(ff,ff+rr)^2
+}
+safeNdf <- function (m) {
+	if (inherits(m,c('nnet','multinom'))) {
+		# no nobs method
+		attr(logLik(m),'df')
+	} else {
+		# for some models, e.g. GAMs, this is safer than attr(logLik(m),'df')
+		nobs(m) - safeRdf(m)
+	}
+}
+safeRdf <- function (m) {
+	if (inherits(m,c('nnet','multinom'))) {
+		# no df.residual method nor nobs method
+		nrow(fitted(m)) - attr(logLik(m),'df')
+	} else if (any(sapply(c('MixMod','clm','clmm','gls','lme'),function (x) inherits(m,x)))) {
+		# no df.residual method, but has a nobs method
+		nobs(m) - attr(logLik(m),'df')
+	} else {
+		df.residual(m)
+	}
 }
 
 crit.AIC <- function (p,ref,alt) if (is.null(ref)) stats::AIC(alt) else stats::AIC(alt) - stats::AIC(ref)
 crit.BIC <- function (p,ref,alt) if (is.null(ref)) stats::BIC(alt) else stats::BIC(alt) - stats::BIC(ref)
 crit.F <- function (p,ref,alt) {
-	if (!inherits(alt,'gam')) {
-		stop('crit.F currently only works with gam/bam models')
-	}
-	r2_alt  <- summary(alt,re.test=FALSE)$r.sq
-	ddf_alt <- alt$df.residual
-	ndf_alt <- sum(alt$edf2)
+	r2_alt  <- getdevexp(alt)
+	ddf_alt <- safeRdf(alt)
+	ndf_alt <- safeNdf(alt)
 	if (is.null(ref)) {
-		r2_ref  <- 0
-		ddf_ref <- nobs(alt)
-		ndf_ref <- 0
+		r2_ref <- ndf_ref <- 0
 	} else {
-		if (!inherits(ref,'gam')) {
-			stop('crit.F currently only works with gam/bam models')
-		}
-		r2_ref  <- summary(ref,re.test=FALSE)$r.sq
-		ddf_ref <- ref$df.residual
-		ndf_ref <- sum(ref$edf2)
+		r2_ref  <- getdevexp(ref)
+		ndf_ref <- safeNdf(ref)
 	}
 	if (is.null(r2_alt) || is.null(r2_ref)) {
 		stop('r^2 not available for this family, cannot compute the F criterion!')
 	}
-	Fval <- (r2_alt - r2_ref) / ((1 - r2_alt) / (ddf_alt))
+	Fval <- ddf_alt * (r2_alt - r2_ref) / (1 - r2_alt)
 	ndf  <- ndf_alt - ndf_ref
 	ddf  <- ddf_alt
 	if (is.na(Fval)) {
@@ -51,11 +59,11 @@ crit.F <- function (p,ref,alt) {
 crit.LRT <- function (p,ref,alt) {
 	if (is.null(ref)) {
 		chLL <- get2LL(alt)
-		chdf <- getdf(alt)
+		chdf <- safeNdf(alt)
 		f1   <- ~0
 	} else {
 		chLL <- get2LL(ref) - get2LL(alt)
-		chdf <- getdf(alt)  - getdf(ref)
+		chdf <- safeRdf(ref) - safeRdf(alt)
 		f1   <- formula(ref)
 	}
 	if (chdf <= 0) {
@@ -80,7 +88,7 @@ crit.LRT <- function (p,ref,alt) {
 }
 crit.2LL <- function (p,ref,alt) if (is.null(ref)) get2LL(alt) else get2LL(alt) - get2LL(ref)
 crit.LL <- crit.2LL
-crit.devexp <- function (p,ref,alt) if (is.null(ref)) getdev(alt) else getdev(alt) - getdev(ref)
+crit.devexp <- function (p,ref,alt) if (is.null(ref)) getdevexp(alt) else getdevexp(alt) - getdevexp(ref)
 crit.deviance <- crit.devexp
 
 elim.AIC <- function (diff) diff > -.001

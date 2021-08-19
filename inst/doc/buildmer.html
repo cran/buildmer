@@ -11,7 +11,7 @@
 
 <meta name="author" content="Cesko C. Voeten" />
 
-<meta name="date" content="2020-08-22" />
+<meta name="date" content="2021-08-19" />
 
 <title>Using ‘buildmer’ to automatically find &amp; compare maximal (mixed) models</title>
 
@@ -189,7 +189,7 @@ pre code {
 
 <h1 class="title toc-ignore">Using ‘buildmer’ to automatically find &amp; compare maximal (mixed) models</h1>
 <h4 class="author">Cesko C. Voeten</h4>
-<h4 class="date">22 August 2020</h4>
+<h4 class="date">19 August 2021</h4>
 
 </div>
 
@@ -211,7 +211,7 @@ head(vowels)</code></pre>
 ## 4           1 Keulen   oey      36.1961 0.25586821 449.7890 1645.075      lOns    4.511475   TRUE
 ## 5           1 Keulen   oey      36.1961 0.32409498 444.6863 1606.261      lOns    4.511475   TRUE
 ## 6           1 Keulen   oey      36.1961 0.39232176 438.5311 1607.581      lOns    4.511475   TRUE</code></pre>
-<p>This is a pilot study that I conducted when I was just starting my PhD, and attempted to analyze in probably the worst way possible. The research question was whether vowel diphthongization in the Dutch vowels // was affected by syllable structure, such that an // within the same syllable would block diphthongization but an // in the onset of the next syllable would permit it. In plain English, the question was whether these five vowels in Dutch were pronounced like the vowel in English ‘fear,’ with the tongue held constant for the duration of the vowel, or like the vowel in English ‘fade,’ which has an upward tongue movement towards the position of the vowel in English ‘fit.’ The position of the tongue can be measured in a simple word-list reading experiment by measuring the speech signal’s so-called ‘first formant,’ labeled <code>f1</code> in this dataset, where lower F1 = higher tongue. Thus, the research question is if the F1 either changes or remains stable for the duration of each vowel depending on whether the following consonant is an ‘l’ in the same syllable (coded as <code>lCda</code> in column <code>following</code>) or in the next syllable (coded as <code>lOns</code>). Additionally, I wanted to control for the factors <code>neighborhood</code> (a measure of entropy: ‘if only one sound is changed anywhere in this word, how many new words could be generated?’), <code>information</code> (another measure of entropy derived from the famous Shannon information measure), and <code>stress</code> (a dummy encoding whether the vowel was stressed or unstressed).</p>
+<p>This is a pilot study that I conducted when I was just starting my PhD, and attempted to analyze in probably the worst way possible. The research question was whether vowel diphthongization in the Dutch vowels // was affected by syllable structure, such that an // within the same syllable would block diphthongization but an // in the onset of the next syllable would permit it. In plain English, the question was whether these five vowels in Dutch were pronounced like the vowel in English ‘fear’, with the tongue held constant for the duration of the vowel, or like the vowel in English ‘fade’, which has an upward tongue movement towards the position of the vowel in English ‘fit’. The position of the tongue can be measured in a simple word-list reading experiment by measuring the speech signal’s so-called ‘first formant’, labeled <code>f1</code> in this dataset, where lower F1 = higher tongue. Thus, the research question is if the F1 either changes or remains stable for the duration of each vowel depending on whether the following consonant is an ‘l’ in the same syllable (coded as <code>lCda</code> in column <code>following</code>) or in the next syllable (coded as <code>lOns</code>). Additionally, I wanted to control for the factors <code>neighborhood</code> (a measure of entropy: ‘if only one sound is changed anywhere in this word, how many new words could be generated?’), <code>information</code> (another measure of entropy derived from the famous Shannon information measure), and <code>stress</code> (a dummy encoding whether the vowel was stressed or unstressed).</p>
 <p>An entirely reasonable way to analyze these data, and the approach I ultimately pursued later in my PhD, would be to take samples from each vowel at 75% realization and at 25% realization, subtract these two, and use this ‘delta score’ as dependent variable: if this score is non-zero, the vowel changes over time, if it is approximately zero, the vowel was stable. In this dataset, however, I instead took as many samples as were present in the part of the wave file corresponding to these vowels, and wanted to fit a linear regression line through all of these samples as a function of the sample number. This number, scaled from 0 to 1 per token, is listed in column <code>timepoint</code>. To make the model even more challenging to fit, only six participants were tested in this pilot study, making it very difficult to find an optimum when including a full random-slope structure.</p>
 <p>In <code>lme4</code> syntax, the fully maximal model would be given by the following formula:</p>
 <pre class="r"><code>f &lt;- f1 ~ vowel*timepoint*following * neighborhood*information*stress + 
@@ -225,9 +225,10 @@ head(vowels)</code></pre>
 </div>
 <div id="finding-the-maximal-feasible-model-doing-stepwise-elimination-from-it" class="section level1">
 <h1>Finding the maximal <em>feasible</em> model &amp; doing stepwise elimination from it</h1>
-<p>To illustrate <code>buildmer</code>’s modular capabilities, we’ll fit this model in two steps. We start by identifying the maximal model that is still capable of converging. We do this by running <code>buildmer</code>, including an optional <code>buildmerControl</code> argument in which we set the <code>direction</code> parameter to <code>&#39;order&#39;</code>. We also set <code>lme4</code>s optimizer to <code>bobyqa</code>, as this manages to get much further than the default <code>nloptwrap</code>. Note how control parameters passed to buildmer itself are encased within <code>buildmerControl</code>, whereas control parameters intended for <code>lmer</code> are directly passed as arguments to <code>buildmer</code> itself.</p>
+<p>To illustrate <code>buildmer</code>’s modular capabilities, we’ll fit this model in two steps. We start by identifying the maximal model that is still capable of converging. We do this by running <code>buildmer</code>, including an optional <code>buildmerControl</code> argument in which we set the <code>direction</code> parameter to <code>&#39;order&#39;</code>. We also set <code>lme4</code>s optimizer to <code>bobyqa</code>, as this manages to get much further than the default <code>nloptwrap</code>. Note how control parameters intended for <code>lmer</code> are specified in the <code>args</code> list inside <code>buildmerControl</code>. For backward-compatibility reasons, they can also be passed to <code>buildmer</code> itself, but this is deprecated now.</p>
 <pre class="r"><code>library(lme4)
-m &lt;- buildmer(f,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),buildmerControl=buildmerControl(direction=&#39;order&#39;))</code></pre>
+m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;order&#39;,
+          args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))</code></pre>
 <pre><code>## Determining predictor order
 ## Fitting via lm: f1 ~ 1
 ## Currently evaluating LRT for: following, timepoint, vowel
@@ -355,7 +356,8 @@ m &lt;- buildmer(f,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),b
 ##     following + timepoint:following | participant) + (1 + timepoint | 
 ##     word)</code></pre>
 <p>The maximal <em>feasible</em> model, i.e. the maximal model that is actually capable of converging, is one excluding random slopes for vowels by participants. This is not optimal for inference purposes, but for now it will do; we will see below that taking out the correlation parameters in the random effects makes it possible to include random slopes for vowels as well. We now proceed to the next step: stepwise elimination. This could also be done using e.g. <code>lmerTest</code>, but since the machinery was needed for <code>direction=&#39;order&#39;</code> anyway it came at very little cost to also implement stepwise elimination in <code>buildmer</code> (both forward and backward are supported). This uses the same elimination criterion as could be specified previously; if left unspecified, it defaults to <code>crit=&#39;LRT&#39;</code>, for the likelihood-ratio test. This is the preferred test for mixed models in <span class="citation">Matuschek et al. (2017)</span>.</p>
-<pre class="r"><code>m &lt;- buildmer(f,data=vowels,direction=&#39;backward&#39;,control=lmerControl(optimizer=&#39;bobyqa&#39;))</code></pre>
+<pre class="r"><code>m &lt;- buildmer(f,data=vowels,buildmerControl=list(direction=&#39;backward&#39;,
+          args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))</code></pre>
 <pre><code>## Fitting ML and REML reference models
 ## Fitting via lmer, with REML: f1 ~ following + vowel + timepoint + vowel:timepoint +
 ##     following:timepoint + following:vowel + following:vowel:timepoint + (1 + timepoint + following
@@ -399,7 +401,6 @@ m &lt;- buildmer(f,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),b
 ## Formula: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint +  
 ##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following |      participant)
 ##    Data: vowels
-## Control: lmerControl(optimizer = &quot;bobyqa&quot;)
 ## 
 ## REML criterion at convergence: 149448.9
 ## 
@@ -452,7 +453,7 @@ m &lt;- buildmer(f,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),b
 </div>
 <div id="diagonal-random-effect-covariances" class="section level1">
 <h1>Diagonal random-effect covariances</h1>
-<p>One hidden feature that is present in <code>buildmer</code> but that has not yet been discussed is the ability to group terms together in blocks for ordering and stepwise-elimination purposes. While the first argument to <code>buildmer</code> functions is normally a formula, it is also possible to pass a ‘buildmer terms list.’ This is a data frame as generated by <code>tabulate.formula</code>:</p>
+<p>One hidden feature that is present in <code>buildmer</code> but that has not yet been discussed is the ability to group terms together in blocks for ordering and stepwise-elimination purposes. While the first argument to <code>buildmer</code> functions is normally a formula, it is also possible to pass a ‘buildmer terms list’. This is a data frame as generated by <code>tabulate.formula</code>:</p>
 <pre class="r"><code>tabulate.formula(f)</code></pre>
 <pre><code>##    index    grouping                      term                                code
 ## 1   &lt;NA&gt;        &lt;NA&gt;                         1                                   1
@@ -492,7 +493,8 @@ m &lt;- buildmer(f,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),b
          (timepoint | word))
 terms &lt;- tabulate.formula(form,group=&#39;vowel[^:]&#39;)</code></pre>
 <p>Finally, we can instruct <code>buildmer</code> to use this specially-crafted <code>terms</code> object by simply passing it along instead of a regular formula. <code>buildmer</code> will recognize what is going on, and use the variable name specified in the <code>dep</code> control argument as the dependent variable in the data frame; this variable name should be provided as a character string.</p>
-<pre class="r"><code>m &lt;- buildmer(terms,data=vowels,control=lmerControl(optimizer=&#39;bobyqa&#39;),buildmerControl=buildmerControl(dep=&#39;f1&#39;))
+<pre class="r"><code>m &lt;- buildmer(terms,data=vowels,buildmerControl=buildmerControl(dep=&#39;f1&#39;,
+          args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))
 ## (output not shown)</code></pre>
 <p>This approach allows random slopes for <code>vowel</code> and for <code>vowel:timepoint</code> to make it in, both of which significantly improve model fit. This model seems much more adequate for statistical inference.</p>
 </div>

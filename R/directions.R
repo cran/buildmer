@@ -296,18 +296,38 @@ order <- function (p) {
 	progress(p,'Determining predictor order')
 	p$tab$ok <- p$tab$score <- NULL
 	tab <- p$tab
+	if (!is.null(p$include)) {
+		p$tab <- transform(p$include,block=NA,ok=TRUE,score=NA)
+		# Remove possible duplicate terms (predictors specified both in 'formula' and in 'include') from consideration in reordering
+		fxd.tab <- is.na(tab$grouping)
+		fxd.inc <- is.na(p$include$grouping)
+		overlap <- NULL
+		if (any(fxd.tab) && any(fxd.inc)) {
+			overlap <- which(fxd.tab & tab$term %in% p$include$term[fxd.inc])
+		}
+		if (any(!fxd.tab) && any(!fxd.inc)) {
+			for (g in unique(tab$grouping[!fxd.tab])) {
+				overlap <- c(overlap,which(tab$grouping == g & tab$term %in% p$include$term[p$include$grouping == g]))
+			}
+		}
+		if (length(overlap)) {
+			tab <- tab[-overlap,]
+		}
+	} else {
+		p$tab <- cbind(tab[0,],ok=logical(),score=numeric())
+	}
 	fxd <- is.na(tab$grouping)
-	if ('1' %in% tab[fxd,'term']) {
+	if ('1' %in% tab[fxd,'term']) { #always keep the intercept
 		where <- tab$block == tab[fxd & tab$term == '1',]$block
-		p$tab <- cbind(tab[where,],ok=TRUE,score=NA)
+		p$tab <- transform(tab[where,],ok=TRUE,score=NA)
 		tab <- tab[!where,]
 		fxd <- is.na(tab$grouping)
 	}
-	else p$tab <- cbind(tab[0,],ok=logical(),score=numeric())
-	if (!is.null(p$include)) p$tab <- rbind(p$tab,transform(p$include,block=NA,ok=TRUE,score=NA))
 
 	p$reml <- p$force.reml
-	if (any( fxd)) p <- reorder(p,tab[fxd,])
+	if (any(fxd)) {
+		p <- reorder(p,tab[fxd,])
+	}
 	if (any(!fxd)) {
 		p$reml <- p$can.use.reml
 		p <- reorder(p,tab[!fxd,])
@@ -320,7 +340,7 @@ reduce.model <- function (p,conv) {
 	if (length(conv) == 1) {
 		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failure was: ',attr(conv,'reason'))
 	} else {
-		statuses <- sapply(conv,function (x) attr(x,'reason'))
+		statuses <- sapply(conv[!unlist(conv)],function (x) attr(x,'reason'))
 		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failures were: ',paste(unique(statuses),collapse='\n    '))
 	}
 	cands <- p$tab$block[!is.na(p$tab$block)]

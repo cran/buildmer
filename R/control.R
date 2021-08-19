@@ -14,6 +14,7 @@
 #' @param formula The model formula for the maximal model you would like to fit. Alternatively, a buildmer term list as obtained from \code{\link{tabulate.formula}}. In the latter formulation, you also need to specify a \code{dep='...'} argument specifying the dependent variable to go along with the term list. See \code{\link{tabulate.formula}} for an example of where this is useful.
 #' @param data The data to fit the model(s) to.
 #' @param family The error distribution to use.
+#' @param args Extra arguments passed to the fitting function.
 #' @param cl Specifies a cluster to use for parallelizing the evaluation of terms. This can be an object as returned by function \code{makeCluster} from package \code{parallel}, or a whole number to let buildmer create, manage, and destroy a cluster for you with the specified number of parallel processes.
 #' @param direction Character string or vector indicating the direction for stepwise elimination; possible options are \code{'order'} (order terms by their contribution to the model), \code{'backward'} (backward elimination), \code{'forward'} (forward elimination, implies \code{order}). The default is the combination \code{c('order','backward')}, to first make sure that the model converges and to then perform backward elimination; other such combinations are perfectly allowed.
 #' @param crit Character string or vector determining the criterion used to test terms for their contribution to the model fit in the ordering step. Possible options are \code{'LRT'} (likelihood-ratio test based on chi-square mixtures per Stram & Lee 1994 for random effects; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), \code{'BIC'} (Bayesian Information Criterion), and \code{'deviance'} (explained deviance -- note that this is not a formal test).
@@ -33,14 +34,14 @@
 #' @param grad.tol Tolerance for declaring gradient convergence. For \code{buildbam}, this is multiplied by 100.
 #' @param hess.tol Tolerance for declaring Hessian convergence. For \code{buildbam}, this is multiplied by 100.
 #' @param I_KNOW_WHAT_I_AM_DOING An internal option that you should not modify unless you know what you are doing.
-#' @param ... Other arguments intended for the fitting function.
+#' @param ... Other arguments intended for the fitting function. This is deprecated and provided for backward-compatibility reasons; please use \code{args} instead.
 #' @details
 #' @export
-
 buildmerControl <- function (
 	formula=quote(stop('No formula specified')),
 	data=NULL,
 	family=gaussian(),
+	args=list(),
 	direction=c('order','backward'),
 	cl=NULL,
 	crit='LRT',
@@ -103,6 +104,11 @@ buildmer.prep <- function (mc,add,banned) {
 		# dots had already been provided, i.e. user used buildmerControl=buildmerControl(...,some_dots_argument)
 		p$dots <- mc$dots
 	}
+	# Add the new 'args' argument onto the 'dots' argument; at some point in the future, this will need to undergo rule inversion
+	if (!is.null(p$dots)) {
+		warning("Passing extra arguments in '...' is deprecated, please use buildmerControl=list(args=list(...)) instead.")
+	}
+	p$dots <- c(p$dots,p$args)
 	# Now evaluate the dots, except for those arguments that are evaluated NSEly...
 	nse <- names(p$dots) %in% c('weights','offset','AR.start')
 	p$dots <- c(lapply(p$dots[!nse],eval,e),p$dots[nse])
@@ -123,6 +129,13 @@ buildmer.prep <- function (mc,add,banned) {
 	defs <- formals(caller)
 	defs <- defs[!names(defs) %in% c(names(mc),banned,'...','buildmerControl')]
 	p <- c(p,lapply(defs,eval))
+	p$I_KNOW_WHAT_I_AM_DOING <- isTRUE(p$I_KNOW_WHAT_I_AM_DOING)
+
+	# Likely user error if 'formula' and/or 'data' were to be set in the caller, but were actually set in buildmerControl
+	# (but we only need to check for 'data' because 'formula' has no default)
+	if ('data' %in% defs && is.null(mc$data) && !is.null(p$data) && !p$I_KNOW_WHAT_I_AM_DOING) {
+		stop("'data' was specified in buildmerControl(), but should have been specified in '",mc[1],"'. If you are sure this is not an error on your part, set I_KNOW_WHAT_I_AM_DOING in buildmerControl()\n")
+	}
 
 	# Further processing necessary for buildmer
 	if (!is.null(p$family)) {
@@ -134,7 +147,6 @@ buildmer.prep <- function (mc,add,banned) {
 		}
 		p$is.gaussian <- p$family$family == 'gaussian' && p$family$link == 'identity'
 	}
-	p$I_KNOW_WHAT_I_AM_DOING <- isTRUE(p$I_KNOW_WHAT_I_AM_DOING)
 	if (is.function(p$crit)) {
 		p$crit.name <- 'custom'
 	} else {
