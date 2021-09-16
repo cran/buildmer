@@ -18,11 +18,13 @@ safeRdf <- function (m) {
 	if (inherits(m,c('nnet','multinom'))) {
 		# no df.residual method nor nobs method
 		nrow(fitted(m)) - attr(logLik(m),'df')
-	} else if (any(sapply(c('MixMod','clm','clmm','gls','lme'),function (x) inherits(m,x)))) {
-		# no df.residual method, but has a nobs method
-		nobs(m) - attr(logLik(m),'df')
 	} else {
-		df.residual(m)
+		if (is.null(rdf <- df.residual(m))) {
+			# apparently, no df.residual implementation; if there is a nobs method, we can work around this
+			# (this is the case for at least MixMod, clm, clmm, gls, and lme)
+			rdf <- nobs(m) - attr(logLik(m),'df')
+		}
+		rdf
 	}
 }
 
@@ -99,3 +101,17 @@ elim.2LL <- elim.AIC
 elim.LL  <- elim.AIC
 elim.devexp <- elim.AIC
 elim.deviance <- elim.AIC
+
+#' Generate an LRT criterion with custom alpha level
+#' 
+#' The \code{elim} argument in \code{buildmerControl} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
+#' 
+#' @param alpha The alpha level for the likelihood-ratio test.
+#' @seealso \code{\link{buildmerControl}}
+#' @export
+LRTalpha <- function (alpha) {
+	if (alpha <= 0 || alpha >= 1) {
+		stop("'alpha' should be in (0,1)")
+	}
+	function (logp) exp(logp) >= alpha
+}

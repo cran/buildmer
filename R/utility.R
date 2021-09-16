@@ -147,9 +147,10 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 		}
 		if (!is.null(model$converged) && !model$converged) return(failure('mgcv reports nonconvergence (converged)',model$converged))
 		if (is.null(model$outer.info)) {
+			if (is.null(model$mgcv.conv)) return(success('No smoothing-parameter selection necessary'))
 			if ((err <- model$mgcv.conv$rms.grad) > grad.tol) return(failure(paste0('mgcv reports absolute gradient containing values >',grad.tol),err))
 			if (!model$mgcv.conv$hess.pos.def) return(failure('mgcv reports non-positive-definite Hessian'))
-			return(success('All buildmer checks passed (gam with outer iteration)'))
+			return(success('All buildmer checks passed (gam with PQL)'))
 		} else {
 			if (!is.null(model$outer.info$conv) && (err <- model$outer.info$conv) != 'full convergence') return(failure('mgcv reports nonconvergence (outer.info$conv)',err))
 			if (!is.null(model$outer.info$grad) && (err <- max(abs(model$outer.info$grad))) > grad.tol)  return(failure(paste0('Absolute gradient contains values >',grad.tol),err))
@@ -158,7 +159,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 				if (inherits(err,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',err))
 				if (err < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
 			}
-			return(success('All buildmer checks passed (gam with PQL)'))
+			return(success('All buildmer checks passed (gam with outer iteration)'))
 		}
 	}
 	if (inherits(model,'merMod')) {
@@ -206,6 +207,8 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 		if ((err <- min(ev)) < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
 		return(success('All buildmer checks passed (clm/clmm)'))
 	}
+	if (inherits(model,'glmertree')) return(converged(model$glmer))
+	if (inherits(model,'lmertree'))  return(converged(model$lmer))
 	success('No checks needed or known for this model type',class(model))
 }
 
@@ -295,7 +298,7 @@ remove.terms <- function (formula,remove) {
 	marginality.ok <- function (remove,have) {
 		forbidden <- if (!all(have == '1')) '1' else NULL
 		for (x in have) {
-			x.star <- if (has.smooth.terms(stats::as.formula(paste0('~',x)))) paste(unpack.smooth.terms(x),collapse='*') else gsub(':','*',x) #replace any interaction by the star operator, which will cause as.formula() to pull in all lower-order terms necessary without any more work from us!
+			x.star <- if (has.smooth.terms(stats::as.formula(paste0('~',x)))) paste(unpack.smooth.terms(x),collapse='*') else gsub(':','*',x) #replace any interaction by the star operator, which will cause as.formula to pull in all lower-order terms necessary without any more work from us!
 			partterms <- attr(terms(stats::as.formula(paste0('~',x.star))),'term.labels')
 			forbidden <- c(forbidden,partterms[partterms != x])
 		}

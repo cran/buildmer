@@ -1,6 +1,6 @@
 #' Set control options for buildmer
 #' 
-#' \code{buildmerControl()} provides all the knobs and levers that can be manipulated during the buildmer fitting and \code{summary()}/\code{anova()} process. Some of these are part of buildmer's core functionality---for instance, \code{crit} allows to specify different elimination criteria, a core buildmer feature---whereas some are only meant for internal usage, e.g.~\code{I_KNOW_WHAT_I_AM_DOING} is only used to turn off the PQL safeguards in \code{buildbam()}/\code{buildgam()}, which you really should only do if you have a very good reason to believe that the PQL check is being triggered erroneously for your problem.
+#' \code{buildmerControl} provides all the knobs and levers that can be manipulated during the buildmer fitting and \code{summary}/\code{anova} process. Some of these are part of buildmer's core functionality---for instance, \code{crit} allows to specify different elimination criteria, a core buildmer feature---whereas some are only meant for internal usage, e.g.~\code{I_KNOW_WHAT_I_AM_DOING} is only used to turn off the PQL safeguards in \code{buildbam}/\code{buildgam}, which you really should only do if you have a very good reason to believe that the PQL check is being triggered erroneously for your problem.
 #' 
 #' With the default options, all \code{buildmer} functions will do two things:
 #' \enumerate{
@@ -35,7 +35,6 @@
 #' @param hess.tol Tolerance for declaring Hessian convergence. For \code{buildbam}, this is multiplied by 100.
 #' @param I_KNOW_WHAT_I_AM_DOING An internal option that you should not modify unless you know what you are doing.
 #' @param ... Other arguments intended for the fitting function. This is deprecated and provided for backward-compatibility reasons; please use \code{args} instead.
-#' @details
 #' @export
 buildmerControl <- function (
 	formula=quote(stop('No formula specified')),
@@ -89,7 +88,17 @@ buildmer.prep <- function (mc,add,banned) {
 
 	# Add any terms provided by any new buildmerControl argument
 	# Any legacy arguments must override these, as all buildX functions now include a buildmerControl=buildmerControl() default
+	# We need to handle NSE arguments in a special way. First of all, they may be in buildmerControl=list(args=list(HERE))
+	NSENAMES <- c('weights','offset','AR.start')
+	saved.nse <- NULL
 	if ('buildmerControl' %in% names(mc)) {
+		if ('args' %in% names(mc$buildmerControl)) {
+			if (any(nse <- names(mc$buildmerControl$args) %in% NSENAMES)) {
+				saved.nse <- mc$buildmerControl$args[nse]
+				mc$buildmerControl$args <- mc$buildmerControl$args[!nse]
+			}
+		}
+		# Now that NSE args have been saved, we can savely eval everything
 		p <- eval(mc$buildmerControl,e)
 		p <- p[!names(p) %in% names(mc)]
 		mc[names(p)] <- p
@@ -110,8 +119,11 @@ buildmer.prep <- function (mc,add,banned) {
 	}
 	p$dots <- c(p$dots,p$args)
 	# Now evaluate the dots, except for those arguments that are evaluated NSEly...
-	nse <- names(p$dots) %in% c('weights','offset','AR.start')
-	p$dots <- c(lapply(p$dots[!nse],eval,e),p$dots[nse])
+	if (!is.null(saved.nse)) {
+		saved.nse <- c(saved.nse,p$dots[nse])
+		p$dots <- p$dots[!nse]
+	}
+	p$dots <- c(lapply(p$dots,eval,e),saved.nse) #and copy the unevaluated NSE arguments back in
 	p$call <- mc[-1]
 	# Legacy arguments must be copied into the dots list, as only the latter is where the patchers look for control/weights/offset
 	# Note how this neatly separates the buildmer call (p$call, with argument 'dots' preserved) and the actual fitter call
