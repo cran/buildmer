@@ -75,18 +75,18 @@ crit.LRT <- function (p,ref,alt) {
 	# If the two models differ in lme4-style random effects, we need to correct the p-value
 	# We cannot use the formula stored in p here because that may still go through re2mgcv
 	f2 <- formula(alt)
-	tab1 <- tabulate.formula(f1)
-	tab2 <- tabulate.formula(f2)
-	fe.same <- isTRUE(all.equal(tab1[ is.na(tab1$grouping),],tab2[ is.na(tab2$grouping),]))
-	re.same <- isTRUE(all.equal(tab1[!is.na(tab1$grouping),],tab2[!is.na(tab2$grouping),]))
-	if (fe.same && !re.same) {
-		# Stram & Lee (1994): mixture of chisq(chdf) and chisq(chdf-1)
-		p1 <- stats::pchisq(chLL,chdf  ,lower.tail=FALSE,log.p=TRUE) - log(2)
-		p2 <- stats::pchisq(chLL,chdf-1,lower.tail=FALSE,log.p=TRUE) - log(2)
-		log(exp(p1) + exp(p2))
-	} else {
-		stats::pchisq(chLL,chdf,lower.tail=FALSE,log.p=TRUE)
+	if (inherits(f1,'formula') && inherits(f2,'formula')) {
+		# may be lme4 formulas
+		tab.ref <- tabulate.formula(f1)
+		tab.alt <- tabulate.formula(f2)
+		if (diff.re <- sum(!is.na(tab.alt$grouping)) - sum(!is.na(tab.ref$grouping))) {
+			# Stram & Lee (1994): mixture of chisq(chdf) and chisq(chdf-1)
+			p1 <- stats::pchisq(chLL,chdf        ,lower.tail=FALSE,log.p=TRUE) - log(2)
+			p2 <- stats::pchisq(chLL,chdf-diff.re,lower.tail=FALSE,log.p=TRUE) - log(2)
+			return(log(exp(p1) + exp(p2)))
+		}
 	}
+	stats::pchisq(chLL,chdf,lower.tail=FALSE,log.p=TRUE)
 }
 crit.2LL <- function (p,ref,alt) if (is.null(ref)) get2LL(alt) else get2LL(alt) - get2LL(ref)
 crit.LL <- crit.2LL
@@ -101,17 +101,3 @@ elim.2LL <- elim.AIC
 elim.LL  <- elim.AIC
 elim.devexp <- elim.AIC
 elim.deviance <- elim.AIC
-
-#' Generate an LRT criterion with custom alpha level
-#' 
-#' The \code{elim} argument in \code{buildmerControl} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
-#' 
-#' @param alpha The alpha level for the likelihood-ratio test.
-#' @seealso \code{\link{buildmerControl}}
-#' @export
-LRTalpha <- function (alpha) {
-	if (alpha <= 0 || alpha >= 1) {
-		stop("'alpha' should be in (0,1)")
-	}
-	function (logp) exp(logp) >= alpha
-}
