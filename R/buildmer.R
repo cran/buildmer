@@ -9,14 +9,21 @@
 #' if (requireNamespace('GLMMadaptive')) model <- buildGLMMadaptive(stress ~ (1|word),family=binomial,data=vowels,buildmerControl=list(args=list(nAGQ=1)))
 #' }
 #' \donttest{
-#' # nonsensical model given these data
 #' if (requireNamespace('GLMMadaptive')) {
-#' model <- buildGLMMadaptive(stress ~ vowel + (vowel|word),
+#' # nonsensical model given these data
+#' model <- buildGLMMadaptive(stress ~ vowel + (vowel|participant),
+#'        family=binomial,data=vowels,buildmerControl=list(args=list(nAGQ=1)))
+#' # or with double-bar syntax for a diagonal r.e. cov. matrix
+#' model <- buildGLMMadaptive(stress ~ vowel + (vowel||participant),
 #'        family=binomial,data=vowels,buildmerControl=list(args=list(nAGQ=1)))
 #' }
 #' }
 #' @details
 #' The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
+#' 
+#' As GLMMadaptive can only fit models with a single random-effect grouping factor, having multiple \emph{different} grouping factors will raise an error.
+#' 
+#' If multiple \emph{identical} random-effect grouping factors are provided, they will be concatenated into a single grouping factor using the double-bar syntax, causing GLMMadaptive to assume a diagonal random-effects covariance matrix. In other words, \code{(1|g) + (0+x|g)} will correctly be treated as diagonal, but note the caveat: \code{(a|g) + (b|g)} will also be treated as fully diagonal, even if \code{a} and \code{b} are factors which might still have had correlations between their individual levels! This is a limitation of both GLMMadaptive and buildmer's approach to handling double bars.
 #' @template seealso
 #' @export
 buildGLMMadaptive <- function (formula,data=NULL,family,buildmerControl=buildmerControl(),...) {
@@ -61,7 +68,7 @@ buildbam <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildm
 	if (!p$I_KNOW_WHAT_I_AM_DOING && !p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT','LL'))) {
 		stop(progress(p,"bam uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam instead, use crit='F', or use crit='deviance' (note that this is not a formal test). (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
 	}
-	f <- formals(match.fun('buildmerControl'))
+	f <- formals(converged)
 	if (p$grad.tol == f$grad.tol) {
 		p$grad.tol <- 100*p$grad.tol
 	}
@@ -285,7 +292,7 @@ buildgamm <- function (formula,data=NULL,family=gaussian(),buildmerControl=build
 #' @export
 buildgamm4 <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl(),...) {
 	if (!requireNamespace('gamm4',quietly=TRUE)) stop('Please install package gamm4')
-	p <- buildmer.prep(match.call(),add=list(fit=fit.gamm4,finalize=FALSE),banned='ddf')
+	p <- buildmer.prep(match.call(),add=list(fit=fit.gamm4),banned='ddf')
 	p$finalize <- FALSE
 	p <- buildmer.fit(p)
 	if (has.smooth.terms(p$formula)) {
@@ -455,7 +462,7 @@ buildmertree <- function (formula,data=NULL,family=gaussian(),buildmerControl=bu
 		p$dots$partitioning <- NULL
 	}
 
-	if (any(p$crit.name == 'LRT')) {
+	if (any(p$crit.name == 'LRT') && !p$I_KNOW_WHAT_I_AM_DOING) {
 		stop('The likelihood-ratio test is not suitable for glmertree models, as there is no way to guarantee that two models being compared are nested. It is suggested to use information criteria such as AIC instead.')
 	}
 	p <- buildmer.fit(p)

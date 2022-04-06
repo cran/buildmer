@@ -252,6 +252,7 @@ if (window.hljs) {
 
 
 
+
 <style type="text/css">
 /* for pandoc --citeproc since 2.11 */
 div.csl-bib-body { }
@@ -298,6 +299,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -381,7 +385,8 @@ pre code {
 
 
 
-<h1 class="title toc-ignore">Using ‘buildmer’ to automatically find &amp; compare maximal (mixed) models</h1>
+<h1 class="title toc-ignore">Using ‘buildmer’ to automatically find
+&amp; compare maximal (mixed) models</h1>
 <h4 class="author">Cesko C. Voeten</h4>
 <h4 class="date">19 August 2021</h4>
 
@@ -390,12 +395,43 @@ pre code {
 
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p><span class="citation">Barr, Levy, Scheepers, &amp; Tily (2013)</span> suggest that for valid statistical inference, a regression model must control for all possible confounding factors, specifically those coming from random effects such as subjects and items. <span class="citation">Bates, Kliegl, Vasishth, &amp; Baayen (2015)</span> suggest that this proposed strategy leads to overfitting and that an appropriately-parsimonious model must be chosen, preferably based on theory but possibly also using stepwise elimination <span class="citation">(Matuschek, Kliegl, Vasishth, Baayen, &amp; Bates, 2017)</span>. Both strategies require a maximal model to be identified (for <span class="citation">Barr et al. (2013)</span>, this is the final model; for <span class="citation">Matuschek et al. (2017)</span>, this is the basis for backward stepwise elimination), but for many psycholinguistic experiments, the <em>truly</em> maximal model will fail to converge and a reasonable subset model needs to be chosen.</p>
-<p>The <code>buildmer</code> package aims to automate the procedures identifying the maximal model that can still converge &amp; performing backward stepwise elimination based on a variety of criteria (change in log-likelihood, AIC, BIC, change in explained deviance). The package does not contain any model-fitting code, but functions as an administrative loop around other packages by simply building up a maximal formula object and passing it along. Currently, the package supports models that can be fitted by <code>(g)lm</code>, <code>(g)lmer</code> (package <code>lme4</code>), <code>gls</code>, <code>lme</code> (package <code>nlme</code>), <code>bam</code>, <code>gam</code>, <code>gamm</code> (package <code>mgcv</code>), <code>gamm4</code> (package <code>gamm4</code>), <code>glmmTMB</code> (package <code>glmmTMB</code>), <code>multinom</code> (package <code>nnet</code>), <code>lmertree</code> and <code>glmertree</code> (package <code>glmertree</code>), <code>mixed_model</code> (package <code>GLMMadaptive</code>), <code>clmm</code> (package <code>ordinal</code>), and any other package if you provide your own wrapper functions.</p>
+<p><span class="citation">Barr, Levy, Scheepers, &amp; Tily
+(2013)</span> suggest that for valid statistical inference, a regression
+model must control for all possible confounding factors, specifically
+those coming from random effects such as subjects and items. <span class="citation">Bates, Kliegl, Vasishth, &amp; Baayen (2015)</span>
+suggest that this proposed strategy leads to overfitting and that an
+appropriately-parsimonious model must be chosen, preferably based on
+theory but possibly also using stepwise elimination <span class="citation">(Matuschek, Kliegl, Vasishth, Baayen, &amp; Bates,
+2017)</span>. Both strategies require a maximal model to be identified
+(for <span class="citation">Barr et al. (2013)</span>, this is the final
+model; for <span class="citation">Matuschek et al. (2017)</span>, this
+is the basis for backward stepwise elimination), but for many
+psycholinguistic experiments, the <em>truly</em> maximal model will fail
+to converge and a reasonable subset model needs to be chosen.</p>
+<p>The <code>buildmer</code> package aims to automate the procedures
+identifying the maximal model that can still converge &amp; performing
+backward stepwise elimination based on a variety of criteria (change in
+log-likelihood, AIC, BIC, change in explained deviance). The package
+does not contain any model-fitting code, but functions as an
+administrative loop around other packages by simply building up a
+maximal formula object and passing it along. Currently, the package
+supports models that can be fitted by <code>(g)lm</code>,
+<code>(g)lmer</code> (package <code>lme4</code>), <code>gls</code>,
+<code>lme</code> (package <code>nlme</code>), <code>bam</code>,
+<code>gam</code>, <code>gamm</code> (package <code>mgcv</code>),
+<code>gamm4</code> (package <code>gamm4</code>), <code>glmmTMB</code>
+(package <code>glmmTMB</code>), <code>multinom</code> (package
+<code>nnet</code>), <code>lmertree</code> and <code>glmertree</code>
+(package <code>glmertree</code>), <code>mixed_model</code> (package
+<code>GLMMadaptive</code>), <code>clmm</code> (package
+<code>ordinal</code>), and any other package if you provide your own
+wrapper functions.</p>
 </div>
 <div id="a-vowel-study" class="section level1">
 <h1>A vowel study</h1>
-<p>To illustrate what <code>buildmer</code> can do for you, the package comes with a particularly pathological dataset called <code>vowels</code>. It looks like this:</p>
+<p>To illustrate what <code>buildmer</code> can do for you, the package
+comes with a particularly pathological dataset called
+<code>vowels</code>. It looks like this:</p>
 <pre class="r"><code>library(buildmer)
 head(vowels)</code></pre>
 <pre><code>##   participant   word vowel neighborhood  timepoint       f1       f2 following information stress
@@ -405,21 +441,75 @@ head(vowels)</code></pre>
 ## 4           1 Keulen   oey      36.1961 0.25586821 449.7890 1645.075      lOns    4.511475   TRUE
 ## 5           1 Keulen   oey      36.1961 0.32409498 444.6863 1606.261      lOns    4.511475   TRUE
 ## 6           1 Keulen   oey      36.1961 0.39232176 438.5311 1607.581      lOns    4.511475   TRUE</code></pre>
-<p>This is a pilot study that I conducted when I was just starting my PhD, and attempted to analyze in probably the worst way possible. The research question was whether vowel diphthongization in the Dutch vowels // was affected by syllable structure, such that an // within the same syllable would block diphthongization but an // in the onset of the next syllable would permit it. In plain English, the question was whether these five vowels in Dutch were pronounced like the vowel in English ‘fear’, with the tongue held constant for the duration of the vowel, or like the vowel in English ‘fade’, which has an upward tongue movement towards the position of the vowel in English ‘fit’. The position of the tongue can be measured in a simple word-list reading experiment by measuring the speech signal’s so-called ‘first formant’, labeled <code>f1</code> in this dataset, where lower F1 = higher tongue. Thus, the research question is if the F1 either changes or remains stable for the duration of each vowel depending on whether the following consonant is an ‘l’ in the same syllable (coded as <code>lCda</code> in column <code>following</code>) or in the next syllable (coded as <code>lOns</code>). Additionally, I wanted to control for the factors <code>neighborhood</code> (a measure of entropy: ‘if only one sound is changed anywhere in this word, how many new words could be generated?’), <code>information</code> (another measure of entropy derived from the famous Shannon information measure), and <code>stress</code> (a dummy encoding whether the vowel was stressed or unstressed).</p>
-<p>An entirely reasonable way to analyze these data, and the approach I ultimately pursued later in my PhD, would be to take samples from each vowel at 75% realization and at 25% realization, subtract these two, and use this ‘delta score’ as dependent variable: if this score is non-zero, the vowel changes over time, if it is approximately zero, the vowel was stable. In this dataset, however, I instead took as many samples as were present in the part of the wave file corresponding to these vowels, and wanted to fit a linear regression line through all of these samples as a function of the sample number. This number, scaled from 0 to 1 per token, is listed in column <code>timepoint</code>. To make the model even more challenging to fit, only six participants were tested in this pilot study, making it very difficult to find an optimum when including a full random-slope structure.</p>
-<p>In <code>lme4</code> syntax, the fully maximal model would be given by the following formula:</p>
+<p>This is a pilot study that I conducted when I was just starting my
+PhD, and attempted to analyze in probably the worst way possible. The
+research question was whether vowel diphthongization in the Dutch vowels
+// was affected by syllable structure, such that an // within the same
+syllable would block diphthongization but an // in the onset of the next
+syllable would permit it. In plain English, the question was whether
+these five vowels in Dutch were pronounced like the vowel in English
+‘fear’, with the tongue held constant for the duration of the vowel, or
+like the vowel in English ‘fade’, which has an upward tongue movement
+towards the position of the vowel in English ‘fit’. The position of the
+tongue can be measured in a simple word-list reading experiment by
+measuring the speech signal’s so-called ‘first formant’, labeled
+<code>f1</code> in this dataset, where lower F1 = higher tongue. Thus,
+the research question is if the F1 either changes or remains stable for
+the duration of each vowel depending on whether the following consonant
+is an ‘l’ in the same syllable (coded as <code>lCda</code> in column
+<code>following</code>) or in the next syllable (coded as
+<code>lOns</code>). Additionally, I wanted to control for the factors
+<code>neighborhood</code> (a measure of entropy: ‘if only one sound is
+changed anywhere in this word, how many new words could be generated?’),
+<code>information</code> (another measure of entropy derived from the
+famous Shannon information measure), and <code>stress</code> (a dummy
+encoding whether the vowel was stressed or unstressed).</p>
+<p>An entirely reasonable way to analyze these data, and the approach I
+ultimately pursued later in my PhD, would be to take samples from each
+vowel at 75% realization and at 25% realization, subtract these two, and
+use this ‘delta score’ as dependent variable: if this score is non-zero,
+the vowel changes over time, if it is approximately zero, the vowel was
+stable. In this dataset, however, I instead took as many samples as were
+present in the part of the wave file corresponding to these vowels, and
+wanted to fit a linear regression line through all of these samples as a
+function of the sample number. This number, scaled from 0 to 1 per
+token, is listed in column <code>timepoint</code>. To make the model
+even more challenging to fit, only six participants were tested in this
+pilot study, making it very difficult to find an optimum when including
+a full random-slope structure.</p>
+<p>In <code>lme4</code> syntax, the fully maximal model would be given
+by the following formula:</p>
 <pre class="r"><code>f &lt;- f1 ~ vowel*timepoint*following * neighborhood*information*stress + 
      (vowel*timepoint*following * neighborhood+information+stress | participant) +
      (timepoint | word)</code></pre>
-<p>It should go without saying that this is a completely unreasonable model that will never converge. A first step towards reducing the model structure could be to reason that effects of neighborhood, information, and stress, which are all properties of the individual words in this dataset, could be subsumed into the random effects by words. This reduces the maximal model to:</p>
+<p>It should go without saying that this is a completely unreasonable
+model that will never converge. A first step towards reducing the model
+structure could be to reason that effects of neighborhood, information,
+and stress, which are all properties of the individual words in this
+dataset, could be subsumed into the random effects by words. This
+reduces the maximal model to:</p>
 <pre class="r"><code>f &lt;- f1 ~ vowel*timepoint*following +
      (vowel*timepoint*following | participant) +
      (timepoint | word)</code></pre>
-<p>This model is still somewhat on the large side, so we will now use <code>buildmer</code> to check: - if this model is capable of converging at all; - if all of these terms are really necessary.</p>
+<p>This model is still somewhat on the large side, so we will now use
+<code>buildmer</code> to check: - if this model is capable of converging
+at all; - if all of these terms are really necessary.</p>
 </div>
 <div id="finding-the-maximal-feasible-model-doing-stepwise-elimination-from-it" class="section level1">
-<h1>Finding the maximal <em>feasible</em> model &amp; doing stepwise elimination from it</h1>
-<p>To illustrate <code>buildmer</code>’s modular capabilities, we’ll fit this model in two steps. We start by identifying the maximal model that is still capable of converging. We do this by running <code>buildmer</code>, including an optional <code>buildmerControl</code> argument in which we set the <code>direction</code> parameter to <code>&#39;order&#39;</code>. We also set <code>lme4</code>s optimizer to <code>bobyqa</code>, as this manages to get much further than the default <code>nloptwrap</code>. Note how control parameters intended for <code>lmer</code> are specified in the <code>args</code> list inside <code>buildmerControl</code>. For backward-compatibility reasons, they can also be passed to <code>buildmer</code> itself, but this is deprecated now.</p>
+<h1>Finding the maximal <em>feasible</em> model &amp; doing stepwise
+elimination from it</h1>
+<p>To illustrate <code>buildmer</code>’s modular capabilities, we’ll fit
+this model in two steps. We start by identifying the maximal model that
+is still capable of converging. We do this by running
+<code>buildmer</code>, including an optional
+<code>buildmerControl</code> argument in which we set the
+<code>direction</code> parameter to <code>&#39;order&#39;</code>. We also set
+<code>lme4</code>s optimizer to <code>bobyqa</code>, as this manages to
+get much further than the default <code>nloptwrap</code>. Note how
+control parameters intended for <code>lmer</code> are specified in the
+<code>args</code> list inside <code>buildmerControl</code>. For
+backward-compatibility reasons, they can also be passed to
+<code>buildmer</code> itself, but this is deprecated now.</p>
 <pre class="r"><code>library(lme4)
 m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;order&#39;,
           args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))</code></pre>
@@ -542,14 +632,52 @@ m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;or
 ## Ending the ordering procedure due to having reached the maximal feasible model - all higher models
 ##     failed to converge. The types of convergence failure are: Singular fit
 ## Finalizing by converting the model to lmerTest</code></pre>
-<p>The <code>order</code> step is useful if the maximal model includes random effects: <code>buildmer</code> will start out with an empty model and keeps adding terms to this model until convergence can no longer be achieved. The <code>order</code> step adds terms in order of their contribution to a certain criterion, such that the most important random slopes will be included first; this criterion is controlled by the <code>crit</code> argument. The default criterion is the significance of the change in log-likelihood (<code>LRT</code>: terms which provide lower chi-square <span class="math inline">\(p\)</span> values are considered more important), but other options are also supported. These are the raw log-likelihood (<code>LL</code>: terms which provide the largest increase in the log-likelihood; this measure will favor categorical predictors with many levels), AIC (<code>AIC</code>), BIC (<code>BIC</code>), explained deviance (<code>deviance</code>), and for GAMMs fitted using package <code>mgcv</code> the change in R-squared (<code>F</code>). You can select among them by passing e.g. <code>crit=&#39;LRT&#39;</code> within the <code>buildmerControl</code> argument. The default <code>direction</code> is <code>c(&#39;order&#39;,&#39;backward&#39;)</code>, i.e. proceeding directly to backward stepwise elimination, but <em>for illustration purposes</em> we separate those steps here. (The <code>crit</code> argument also accepts vectors, such that e.g. <code>direction=c(&#39;order&#39;,&#39;backward&#39;),crit=c(&#39;LL&#39;,&#39;LRT&#39;)</code> is allowed.)</p>
-<p>After a lot of model fits, the model converges onto the following maximal model:</p>
+<p>The <code>order</code> step is useful if the maximal model includes
+random effects: <code>buildmer</code> will start out with an empty model
+and keeps adding terms to this model until convergence can no longer be
+achieved. The <code>order</code> step adds terms in order of their
+contribution to a certain criterion, such that the most important random
+slopes will be included first; this criterion is controlled by the
+<code>crit</code> argument. The default criterion is the significance of
+the change in log-likelihood (<code>LRT</code>: terms which provide
+lower chi-square <span class="math inline">\(p\)</span> values are
+considered more important), but other options are also supported. These
+are the raw log-likelihood (<code>LL</code>: terms which provide the
+largest increase in the log-likelihood; this measure will favor
+categorical predictors with many levels), AIC (<code>AIC</code>), BIC
+(<code>BIC</code>), explained deviance (<code>deviance</code>), and for
+GAMMs fitted using package <code>mgcv</code> the change in R-squared
+(<code>F</code>). You can select among them by passing
+e.g. <code>crit=&#39;LRT&#39;</code> within the <code>buildmerControl</code>
+argument. The default <code>direction</code> is
+<code>c(&#39;order&#39;,&#39;backward&#39;)</code>, i.e. proceeding directly to backward
+stepwise elimination, but <em>for illustration purposes</em> we separate
+those steps here. (The <code>crit</code> argument also accepts vectors,
+such that
+e.g. <code>direction=c(&#39;order&#39;,&#39;backward&#39;),crit=c(&#39;LL&#39;,&#39;LRT&#39;)</code> is
+allowed.)</p>
+<p>After a lot of model fits, the model converges onto the following
+maximal model:</p>
 <pre class="r"><code>(f &lt;- formula(m@model))</code></pre>
 <pre><code>## f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint + 
 ##     following:vowel + following:vowel:timepoint + (1 + timepoint + 
 ##     following + timepoint:following | participant) + (1 + timepoint | 
 ##     word)</code></pre>
-<p>The maximal <em>feasible</em> model, i.e. the maximal model that is actually capable of converging, is one excluding random slopes for vowels by participants. This is not optimal for inference purposes, but for now it will do; we will see below that taking out the correlation parameters in the random effects makes it possible to include random slopes for vowels as well. We now proceed to the next step: stepwise elimination. This could also be done using e.g. <code>lmerTest</code>, but since the machinery was needed for <code>direction=&#39;order&#39;</code> anyway it came at very little cost to also implement stepwise elimination in <code>buildmer</code> (both forward and backward are supported). This uses the same elimination criterion as could be specified previously; if left unspecified, it defaults to <code>crit=&#39;LRT&#39;</code>, for the likelihood-ratio test. This is the preferred test for mixed models in <span class="citation">Matuschek et al. (2017)</span>.</p>
+<p>The maximal <em>feasible</em> model, i.e. the maximal model that is
+actually capable of converging, is one excluding random slopes for
+vowels by participants. This is not optimal for inference purposes, but
+for now it will do; we will see below that taking out the correlation
+parameters in the random effects makes it possible to include random
+slopes for vowels as well. We now proceed to the next step: stepwise
+elimination. This could also be done using e.g. <code>lmerTest</code>,
+but since the machinery was needed for <code>direction=&#39;order&#39;</code>
+anyway it came at very little cost to also implement stepwise
+elimination in <code>buildmer</code> (both forward and backward are
+supported). This uses the same elimination criterion as could be
+specified previously; if left unspecified, it defaults to
+<code>crit=&#39;LRT&#39;</code>, for the likelihood-ratio test. This is the
+preferred test for mixed models in <span class="citation">Matuschek et
+al. (2017)</span>.</p>
 <pre class="r"><code>m &lt;- buildmer(f,data=vowels,buildmerControl=list(direction=&#39;backward&#39;,
           args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))</code></pre>
 <pre><code>## Fitting ML and REML reference models
@@ -587,8 +715,11 @@ m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;or
 ## 14        word                 timepoint                  NA word timepoint         1 2.198802e-153
 ## All terms are significant
 ## Finalizing by converting the model to lmerTest</code></pre>
-<p>It appears that in this example, all terms were significant in backward-stepwise elimination.</p>
-<p>By default, <code>buildmer</code> automatically calculates summary and ANOVA statistics based on Wald <span class="math inline">\(z\)</span>-scores (summary) or Wald <span class="math inline">\(\chi^2\)</span> tests (ANOVA). For answering our research question, we look at the summary:</p>
+<p>It appears that in this example, all terms were significant in
+backward-stepwise elimination.</p>
+<p>By default, <code>buildmer</code> automatically calculates summary
+and ANOVA statistics based on Wald <span class="math inline">\(z\)</span>-scores (summary) or Wald <span class="math inline">\(\chi^2\)</span> tests (ANOVA). For answering our
+research question, we look at the summary:</p>
 <pre class="r"><code>summary(m)</code></pre>
 <pre><code>## Linear mixed model fit by REML
 ## (p-values based on Wald z-scores) [&#39;lmerMod&#39;]
@@ -643,11 +774,19 @@ m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;or
 ## vowl3:tmpnt  0.023 -0.024  0.166  0.164 -0.788  0.210 -0.044 -0.210 -0.208              
 ## vowl4:tmpnt -0.027  0.024  0.219  0.218  0.210 -0.788  0.051 -0.277 -0.276 -0.265       
 ## fllwnglOns:  0.567 -0.720 -0.016 -0.020 -0.024  0.024 -0.788  0.020  0.024  0.031 -0.030</code></pre>
-<p>The significant effect for <code>followinglOns:timepoint</code> shows that if the following /l/ is in the onset of the next syllable, there is a much larger change in F1 compared to the reference condition of having the following /l/ in the coda of the same syllable.</p>
+<p>The significant effect for <code>followinglOns:timepoint</code> shows
+that if the following /l/ is in the onset of the next syllable, there is
+a much larger change in F1 compared to the reference condition of having
+the following /l/ in the coda of the same syllable.</p>
 </div>
 <div id="diagonal-random-effect-covariances" class="section level1">
 <h1>Diagonal random-effect covariances</h1>
-<p>One hidden feature that is present in <code>buildmer</code> but that has not yet been discussed is the ability to group terms together in blocks for ordering and stepwise-elimination purposes. While the first argument to <code>buildmer</code> functions is normally a formula, it is also possible to pass a ‘buildmer terms list’. This is a data frame as generated by <code>tabulate.formula</code>:</p>
+<p>One hidden feature that is present in <code>buildmer</code> but that
+has not yet been discussed is the ability to group terms together in
+blocks for ordering and stepwise-elimination purposes. While the first
+argument to <code>buildmer</code> functions is normally a formula, it is
+also possible to pass a ‘buildmer terms list’. This is a data frame as
+generated by <code>tabulate.formula</code>:</p>
 <pre class="r"><code>tabulate.formula(f)</code></pre>
 <pre><code>##    index    grouping                      term                                code
 ## 1   &lt;NA&gt;        &lt;NA&gt;                         1                                   1
@@ -679,34 +818,98 @@ m &lt;- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction=&#39;or
 ## 12 NA participant timepoint:following
 ## 13                          NA word 1
 ## 14                  NA word timepoint</code></pre>
-<p>This is an internal <code>buildmer</code> data structure, but it is rather self-explanatory in how it is used. It is possible to modify the <code>block</code> column to force terms to be evaluated as a single group, rather than separately, by giving these terms the same <code>block</code> value. These values are not used in any other way than this purpose of selecting terms to be grouped together, which can be exploited to fit models with diagonal random-effect structures. The first step is to create explicit columns for the factor <code>vowel</code>; if this is not done, only random-effect correlations between vowels and <em>other</em> random slopes will be eliminated and those between the vowels themselves will remain.</p>
+<p>This is an internal <code>buildmer</code> data structure, but it is
+rather self-explanatory in how it is used. It is possible to modify the
+<code>block</code> column to force terms to be evaluated as a single
+group, rather than separately, by giving these terms the same
+<code>block</code> value. These values are not used in any other way
+than this purpose of selecting terms to be grouped together, which can
+be exploited to fit models with diagonal random-effect structures. The
+first step is to create explicit columns for the factor
+<code>vowel</code>; if this is not done, only random-effect correlations
+between vowels and <em>other</em> random slopes will be eliminated and
+those between the vowels themselves will remain.</p>
 <pre class="r"><code>vowels &lt;- cbind(vowels,model.matrix(~vowel,vowels))</code></pre>
-<p>We next create a formula for this modified dataset. To make it easier to type, we do not explicitly diagonalize the formula ourselves, but use <code>buildmer</code>’s <code>diag()</code> method for <code>formula</code> objects. We then call <code>tabulate.formula()</code> on the new formula, providing a regular expression that matches terms belonging to the same vowel. Note that we <em>cannot</em> use the simple <code>vowel</code> factor in the fixed-effects part of the formula, as this will break <code>buildmer</code>’s marginality checks when considering which terms are eligible for inclusion or removal.</p>
+<p>We next create a formula for this modified dataset. To make it easier
+to type, we do not explicitly diagonalize the formula ourselves, but use
+<code>buildmer</code>’s <code>diag()</code> method for
+<code>formula</code> objects. We then call
+<code>tabulate.formula()</code> on the new formula, providing a regular
+expression that matches terms belonging to the same vowel. Note that we
+<em>cannot</em> use the simple <code>vowel</code> factor in the
+fixed-effects part of the formula, as this will break
+<code>buildmer</code>’s marginality checks when considering which terms
+are eligible for inclusion or removal.</p>
 <pre class="r"><code>form &lt;- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following + 
          ((vowel1+vowel2+vowel3+vowel4)*timepoint*following | participant) +
          (timepoint | word))
 terms &lt;- tabulate.formula(form,group=&#39;vowel[^:]&#39;)</code></pre>
-<p>Finally, we can instruct <code>buildmer</code> to use this specially-crafted <code>terms</code> object by simply passing it along instead of a regular formula. <code>buildmer</code> will recognize what is going on, and use the variable name specified in the <code>dep</code> control argument as the dependent variable in the data frame; this variable name should be provided as a character string.</p>
+<p>Finally, we can instruct <code>buildmer</code> to use this
+specially-crafted <code>terms</code> object by simply passing it along
+instead of a regular formula. <code>buildmer</code> will recognize what
+is going on, and use the variable name specified in the <code>dep</code>
+control argument as the dependent variable in the data frame; this
+variable name should be provided as a character string.</p>
 <pre class="r"><code>m &lt;- buildmer(terms,data=vowels,buildmerControl=buildmerControl(dep=&#39;f1&#39;,
           args=list(control=lmerControl(optimizer=&#39;bobyqa&#39;))))
 ## (output not shown)</code></pre>
-<p>This approach allows random slopes for <code>vowel</code> and for <code>vowel:timepoint</code> to make it in, both of which significantly improve model fit. This model seems much more adequate for statistical inference.</p>
+<p>This approach allows random slopes for <code>vowel</code> and for
+<code>vowel:timepoint</code> to make it in, both of which significantly
+improve model fit. This model seems much more adequate for statistical
+inference.</p>
 </div>
 <div id="other-options" class="section level1">
 <h1>Other options</h1>
-<p>Because <code>buildmer</code> does not do any model fitting by itself but is only an administrative formula processor around pre-existing modeling fuctions, it was straightforward to extend it beyond its original purpose of mixed-effects models. The logical extension of <code>buildmer</code> to GAMMs is fully supported, with appropriate safeguards against using likelihood-based tests for <code>bam</code> and <code>gamm</code> models in the generalized case, which use PQL (penalized quasi-likelihood). Relevant functions are available as <code>buildbam</code>, <code>buildgam</code>, <code>buildgamm</code>, and <code>buildgamm4</code>; for <code>buildbam</code> and <code>buildgam</code>, random effects in <code>lme4</code> form are converted to <code>s(...,bs=&#39;re&#39;)</code> form automatically. <code>glmmTMB</code> models are also supported via function <code>buildglmmTMB</code>, although their syntax for covariance structures (e.g. <code>diag(timepoint | participant)</code>) is not; these models are still useful for their ability to handle autocorrelation, zero-inflation, and to use REML for GLMMs. From package <code>nlme</code>, <code>gls</code> models are supported via <code>buildgls</code>, <code>lme</code> models are supported via <code>buildlme</code>. At the request of Willemijn Heeren, <code>buildmer</code> was also extended to handle multinomial-logistic-regression models fitted by function <code>multinom</code> from package <code>nnet</code>; see function <code>buildmultinom</code>. <code>buildmertree</code> makes it possible to do term ordering and backward elimination of the random-effects part of <code>glmertree</code> models. <code>buildGLMMadaptive</code> works with function <code>mixed_model</code> from package <code>GLMMadaptive</code>. <code>buildclmm</code> uses functions <code>clm</code> and <code>clmm</code> from package <code>ordinal</code>. Finally, <code>buildcustom</code> allows you to write your own wrapper functions, making it possible to use the buildmer machinery with anything that accepts a formula.</p>
+<p>Because <code>buildmer</code> does not do any model fitting by itself
+but is only an administrative formula processor around pre-existing
+modeling fuctions, it was straightforward to extend it beyond its
+original purpose of mixed-effects models. The logical extension of
+<code>buildmer</code> to GAMMs is fully supported, with appropriate
+safeguards against using likelihood-based tests for <code>bam</code> and
+<code>gamm</code> models in the generalized case, which use PQL
+(penalized quasi-likelihood). Relevant functions are available as
+<code>buildbam</code>, <code>buildgam</code>, <code>buildgamm</code>,
+and <code>buildgamm4</code>; for <code>buildbam</code> and
+<code>buildgam</code>, random effects in <code>lme4</code> form are
+converted to <code>s(...,bs=&#39;re&#39;)</code> form automatically.
+<code>glmmTMB</code> models are also supported via function
+<code>buildglmmTMB</code>, although their syntax for covariance
+structures (e.g. <code>diag(timepoint | participant)</code>) is not;
+these models are still useful for their ability to handle
+autocorrelation, zero-inflation, and to use REML for GLMMs. From package
+<code>nlme</code>, <code>gls</code> models are supported via
+<code>buildgls</code>, <code>lme</code> models are supported via
+<code>buildlme</code>. At the request of Willemijn Heeren,
+<code>buildmer</code> was also extended to handle
+multinomial-logistic-regression models fitted by function
+<code>multinom</code> from package <code>nnet</code>; see function
+<code>buildmultinom</code>. <code>buildmertree</code> makes it possible
+to do term ordering and backward elimination of the random-effects part
+of <code>glmertree</code> models. <code>buildGLMMadaptive</code> works
+with function <code>mixed_model</code> from package
+<code>GLMMadaptive</code>. <code>buildclmm</code> uses functions
+<code>clm</code> and <code>clmm</code> from package
+<code>ordinal</code>. Finally, <code>buildcustom</code> allows you to
+write your own wrapper functions, making it possible to use the buildmer
+machinery with anything that accepts a formula.</p>
 </div>
 <div id="references" class="section level1 unnumbered">
 <h1 class="unnumbered">References</h1>
 <div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
 <div id="ref-keepitmaximal" class="csl-entry">
-Barr, D. J., Levy, R., Scheepers, C., &amp; Tily, H. J. (2013). Random effects structure for confirmatory hypothesis testing: Keep it maximal. <em>Journal of Memory and Language</em>, <em>68</em>(3), 255–278.
+Barr, D. J., Levy, R., Scheepers, C., &amp; Tily, H. J. (2013). Random
+effects structure for confirmatory hypothesis testing: Keep it maximal.
+<em>Journal of Memory and Language</em>, <em>68</em>(3), 255–278.
 </div>
 <div id="ref-parsimonious" class="csl-entry">
-Bates, D., Kliegl, R., Vasishth, S., &amp; Baayen, H. (2015). Parsimonious mixed models. <em>arXiv Preprint arXiv:1506.04967</em>.
+Bates, D., Kliegl, R., Vasishth, S., &amp; Baayen, H. (2015).
+Parsimonious mixed models. <em>arXiv Preprint arXiv:1506.04967</em>.
 </div>
 <div id="ref-stepwise" class="csl-entry">
-Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H., &amp; Bates, D. (2017). Balancing <span>T</span>ype <span>I</span> error and power in linear mixed models. <em>Journal of Memory and Language</em>, <em>94</em>, 305–315.
+Matuschek, H., Kliegl, R., Vasishth, S., Baayen, H., &amp; Bates, D.
+(2017). Balancing <span>T</span>ype <span>I</span> error and power in
+linear mixed models. <em>Journal of Memory and Language</em>,
+<em>94</em>, 305–315.
 </div>
 </div>
 </div>

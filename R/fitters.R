@@ -1,9 +1,30 @@
 fit.GLMMadaptive <- function (p,formula) {
 	fixed <- lme4::nobars(formula)
 	bars <- lme4::findbars(formula)
-	if (is.null(bars)) return(fit.buildmer(p,formula))
-	if (length(bars) != 1) stop(paste0('mixed_model can only handle a single random-effect grouping factor, yet you seem to have specified ',length(bars)))
-	random <- mkForm(as.character(bars))
+	if (is.null(bars)) {
+		return(fit.buildmer(p,formula))
+	}
+	if (length(bars) > 1) {
+		# could be a ZCP term
+		groups <- sapply(bars,function (x) as.character(list(x[[3]])))
+		if ((lug <- length(unique(groups))) > 1) {
+			stop(paste0('mixed_model can only handle a single random-effect grouping factor, yet you seem to have specified ',lug))
+		}
+		terms <- sapply(bars,function (x) as.character(list(x[[2]])))
+		# findbars always adds in '0 +'
+		if ('1' %in% terms) {
+			terms <- sapply(terms,function (x) {
+				tab <- tabulate.formula(mkForm(x))
+				if (!nrow(tab)) {
+					return(x)
+				}
+				tab$term
+			})
+		}
+		random <- mkForm(paste0(paste0(terms,collapse='+'),'||',groups[[1]]))
+	} else {
+		random <- mkForm(as.character(bars))
+	}
 	progress(p,'Fitting via mixed_model: ',fixed,', random=',random)
 	patch.GLMMadaptive(p,GLMMadaptive::mixed_model,c(list(fixed=fixed,random=random,data=p$data,family=p$family),p$dots))
 }
@@ -15,7 +36,8 @@ fit.bam <- function (p,formula) {
 	if (length(attr(stats::terms(formula),'term.labels')) == 0) {
 		# bam is unable to fit intercept-only models
 		formula <- add.terms(formula,'intercept')
-		p$data$intercept <- 1
+		nr <- NROW(p$data)
+		p$data$intercept <- cbind(rep(1,nr),rep(0,nr))
 	}
 	if (p$reml) {
 		method <- 'fREML'
@@ -90,7 +112,7 @@ fit.gam <- function (p,formula) {
 		if (p$quickstart > 3) {
 			samfrac <- p$quickstart - floor(p$quickstart)
 			if (samfrac == 0) samfrac <- .1
-			n <- nrow(data)
+			n <- NROW(data)
 			data <- data[sample.int(n,n*samfrac),]
 		}
 		if (p$quickstart > 4) {
