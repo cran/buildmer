@@ -726,6 +726,7 @@ research question, we look at the summary:</p>
 ## Formula: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint +  
 ##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following |      participant)
 ##    Data: vowels
+## Control: lmerControl(optimizer = &quot;bobyqa&quot;)
 ## 
 ## REML criterion at convergence: 149448.9
 ## 
@@ -738,9 +739,9 @@ research question, we look at the summary:</p>
 ##  word        (Intercept)              2539.3   50.39                    
 ##              timepoint               11089.5  105.31   -0.78            
 ##  participant (Intercept)              2199.7   46.90                    
-##              timepoint                3423.6   58.51   -0.50            
+##              timepoint                3423.5   58.51   -0.50            
 ##              followinglOns             747.3   27.34    0.11  0.65      
-##              timepoint:followinglOns  3053.3   55.26    0.64 -0.88 -0.67
+##              timepoint:followinglOns  3053.2   55.26    0.64 -0.88 -0.67
 ##  Residual                            10018.1  100.09                    
 ## Number of obs: 12351, groups:  word, 148; participant, 6
 ## 
@@ -755,7 +756,7 @@ research question, we look at the summary:</p>
 ## timepoint                -15.445     26.856  -0.575  0.56524    
 ## vowel1:timepoint         -39.663     18.239  -2.175  0.02966 *  
 ## vowel2:timepoint         -91.032     18.171  -5.010 5.45e-07 ***
-## vowel3:timepoint         105.886     17.554   6.032 1.62e-09 ***
+## vowel3:timepoint         105.886     17.555   6.032 1.62e-09 ***
 ## vowel4:timepoint          38.924     20.271   1.920  0.05483 .  
 ## followinglOns:timepoint -136.888     29.411  -4.654 3.25e-06 ***
 ## ---
