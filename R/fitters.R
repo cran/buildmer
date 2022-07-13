@@ -83,13 +83,17 @@ fit.clmm <- function (p,formula) {
 	clmm.control <- p$args$clmm.control
 	p$args$clm.control <- p$args$clmm.control <- NULL
 	if (is.null(lme4::findbars(formula))) {
-		p$args <- p$args[names(p$args) %in% names(formals(ordinal::clm))]
-		p$args$control <- clm.control
+		if (length(p$args)) {
+			p$args <- p$args[names(p$args) %in% names(formals(ordinal::clm))]
+			p$args$control <- clm.control
+		}
 		p$control.name <- p$control.names$clm
 		patch.lm(p,ordinal::clm,c(list(formula=formula,data=p$data),p$args))
 	} else {
-		p$args <- p$args[names(p$args) %in% names(formals(ordinal::clmm))]
-		p$args$control <- clmm.control
+		if (length(p$args)) {
+			p$args <- p$args[names(p$args) %in% names(formals(ordinal::clmm))]
+			p$args$control <- clmm.control
+		}
 		p$control.name <- p$control.names$clmm
 		patch.lm(p,ordinal::clmm,c(list(formula=formula,data=p$data),p$args))
 	}
@@ -210,7 +214,7 @@ fit.gls <- function (p,formula) {
 	X <- model.matrix(formula,p$data)
 	newform <- y ~ 0+X
 	newdata <- list(y=y,X=X)
-	na <- is.na(coef(lm(newform,newdata)))
+	na <- is.na(coef(stats::lm(newform,newdata)))
 	if (ndrop <- sum(na)) {
 		progress(p,'gls model is rank-deficient, so dropping ',ndrop,if (ndrop > 1) ' columns/coefficients' else ' column/coefficient','. If this is the final model, the resulting summary may look a bit strange.')
 		newdata$X <- newdata$X[,!na]
@@ -274,4 +278,23 @@ fit.mertree <- function (p,formula) {
 fit.multinom <- function (p,formula) {
 	progress(p,'Fitting via multinom: ',formula)
 	patch.lm(p,nnet::multinom,c(list(formula=formula,data=p$data),p$args))
+}
+
+fit.nb <- function (p,formula) {
+	# We can't rely on matching formals between glm.nb and glmer.nb, because glmer.nb accepts dots arguments
+	in.glm   <- names(p$args %in% names(formals(MASS::glm.nb)))
+	in.glmer <- names(p$args %in% names(formals(lme4::glmer.nb)))
+	if (is.null(lme4::findbars(formula))) {
+		if (length(p$args)) {
+			p$args <- p$args[!(in.glmer & !in.glm)]
+		}
+		progress(p,'Fitting via glm.nb: ',formula)
+		patch.lm(p,MASS::glm.nb,c(list(formula=formula,data=p$data),p$args))
+	} else {
+		if (length(p$args)) {
+			p$args <- p$args[!(in.glm & !in.glmer)]
+		}
+		progress(p,'Fitting via glmer.nb: ',formula)
+		patch.lmer(p,lme4::glmer.nb,c(list(formula=formula,data=p$data),p$args))
+	}
 }

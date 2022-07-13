@@ -1,8 +1,8 @@
-NSENAMES <- c('weights','offset','AR.start','control')
+NSENAMES <- c('weights','offset','AR.start','control','subset')
 
 #' Set control options for buildmer
 #' 
-#' \code{buildmerControl} provides all the knobs and levers that can be manipulated during the buildmer fitting and \code{summary}/\code{anova} process. Some of these are part of buildmer's core functionality---for instance, \code{crit} allows to specify different elimination criteria, a core buildmer feature---whereas some are only meant for internal usage, e.g.~\code{I_KNOW_WHAT_I_AM_DOING} is only used to turn off the PQL safeguards in \code{buildbam}/\code{buildgam}, which you really should only do if you have a very good reason to believe that the PQL check is being triggered erroneously for your problem.
+#' \code{buildmerControl} provides all the knobs and levers that can be manipulated during the buildmer fitting and \code{summary}/\code{anova} process. Some of these are part of buildmer's core functionality---for instance, \code{crit} allows to specify different elimination criteria, a core buildmer feature---whereas some are only meant for internal usage, e.g. \code{I_KNOW_WHAT_I_AM_DOING} is only used to turn off the PQL safeguards in \code{buildbam}/\code{buildgam}, which you really should only do if you have a very good reason to believe that the PQL check is being triggered erroneously for your problem.
 #' 
 #' With the default options, all \code{buildmer} functions will do two things:
 #' \enumerate{
@@ -19,10 +19,10 @@ NSENAMES <- c('weights','offset','AR.start','control')
 #' @param args Extra arguments passed to the fitting function.
 #' @param cl Specifies a cluster to use for parallelizing the evaluation of terms. This can be an object as returned by function \code{makeCluster} from package \code{parallel}, or a whole number to let buildmer create, manage, and destroy a cluster for you with the specified number of parallel processes.
 #' @param direction Character string or vector indicating the direction for stepwise elimination; possible options are \code{'order'} (order terms by their contribution to the model), \code{'backward'} (backward elimination), \code{'forward'} (forward elimination, implies \code{order}). The default is the combination \code{c('order','backward')}, to first make sure that the model converges and to then perform backward elimination; other such combinations are perfectly allowed.
-#' @param crit Character string or vector determining the criterion used to test terms for their contribution to the model fit in the ordering step. Possible options are \code{'LRT'} (likelihood-ratio test based on chi-square mixtures per Stram & Lee 1994 for random effects; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), \code{'BIC'} (Bayesian Information Criterion), and \code{'deviance'} (explained deviance -- note that this is not a formal test).
-#' @param elim Character string or vector determining the criterion used to test terms for elimination in the elimination step. Possible options are \code{'LRT'} (likelihood-ratio test based on chi-square mixtures per Stram & Lee 1994 for random effects; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), \code{'BIC'} (Bayesian Information Criterion), and \code{'deviance'} (explained deviance --- note that this is not a formal test).
+#' @param crit Character string or vector determining the criterion used to test terms for their contribution to the model fit in the ordering step. Possible options are \code{'LRT'} (likelihood-ratio test based on chi-square mixtures per Stram & Lee 1994 for random effects; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), \code{'BIC'} (Bayesian Information Criterion), and \code{'deviance'} (explained deviance -- note that this is not a formal test). If left at its default value of \code{NULL}, the same value is used as in the \code{elim} argument; if that is also \code{NULL}, both are set to \code{'LRT'}.
+#' @param elim Character string or vector determining the criterion used to test terms for elimination in the elimination step. Possible options are \code{'LRT'} (likelihood-ratio test based on chi-square mixtures per Stram & Lee 1994 for random effects; this is the default), \code{'LL'} (use the raw -2 log likelihood), \code{'AIC'} (Akaike Information Criterion), \code{'BIC'} (Bayesian Information Criterion), and \code{'deviance'} (explained deviance --- note that this is not a formal test). If left at its default value of \code{NULL}, the same value is used as in the \code{crit} argument; if that is also \code{NULL}, both are set to \code{'LRT'}.
 #' @param fit Internal parameter --- do not modify.
-#' @param include A one-sided formula or character vector of terms that will be kept in the model at all times. These do not need to be specified separately in the \code{formula} argument. Useful for e.g. passing correlation structures in \code{glmmTMB} models.
+#' @param include A one-sided formula or character vector of terms that will be included in the model at all times and are not subject to testing for elimination. These do not need to be specified separately in the \code{formula} argument. Useful for e.g. passing correlation structures in \code{glmmTMB} models.
 #' @param quiet A logical indicating whether to suppress progress messages.
 #' @param calc.anova Logical indicating whether to also calculate the ANOVA table for the final model after term elimination.
 #' @param calc.summary Logical indicating whether to also calculate the summary table for the final model after term elimination.
@@ -30,8 +30,8 @@ NSENAMES <- c('weights','offset','AR.start','control')
 #' @param quickstart For \code{gam} models only: a numeric with values from 0 to 5. If set to 1, will use \code{bam} to obtain starting values for \code{gam}'s outer iteration, potentially resulting in a much faster fit for each model. If set to 2, will disregard ML/REML and always use \code{bam}'s \code{fREML} for the quickstart fit. 3 also sets \code{discrete=TRUE}. Values between 3 and 4 fit the quickstart model to a subset of that value (e.g.\ \code{quickstart=3.1} fits the quickstart model to 10\% of the data, which is also the default if \code{quickstart=3}. Values between 4 and 5 do the same, but also set a very sloppy convergence tolerance of 0.2.
 #' @param dep A character string specifying the name of the dependent variable. Only used if \code{formula} is a buildmer terms list.
 #' @param REML In some situations, the user may want to force REML on or off, rather than using buildmer's autodetection. If \code{REML=TRUE} (or more precisely, if \code{isTRUE(REML)} evaluates to true), then buildmer will always use REML. This results in invalid results if formal model-comparison criteria are used with models differing in fixed effects (and the user is not guarded against this), but is useful with the 'deviance-explained' criterion, where it is actually the default (you can disable this and use the 'normal' REML/ML-differentiating behavior by passing \code{REML=NA}).
-#' @param can.use.reml Internal option specifying whether the fitting engine should distinguish between fixed-effects and random-effects model comparisons. Do not set this option yourself unless you are programming a new fitting function for \code{buildcustom} --- this is automatically modified appropriately if you via the \code{REML} option.
-#' @param force.reml Internal option specifying whether, if not differentiating between fixed-effects and random-effects model comparisons, these comparisons should be based on ML or on REML (if possible). Do not set this option yourself unless you are programming a new fitting function for \code{buildcustom} --- this is automatically modified appropriately if you pass a \code{REML} option.
+#' @param can.use.reml Internal option specifying whether the fitting engine should distinguish between fixed-effects and random-effects model comparisons. Do not set this option yourself unless you are programming a new fitting function for \code{buildcustom}.
+#' @param force.reml Internal option specifying whether, if not differentiating between fixed-effects and random-effects model comparisons, these comparisons should be based on ML or on REML (if possible). Do not set this option yourself unless you are programming a new fitting function for \code{buildcustom}. Enabling this option only makes sense for criteria that do not compare likelihoods, in which case this is an optimization; it is applied automatically for the 'deviance-explained' criterion.
 #' @param singular.ok Logical indicating whether singular fits are acceptable. Only for lme4 models.
 #' @param grad.tol Tolerance for declaring gradient convergence. For \code{buildbam}, this is multiplied by 100.
 #' @param hess.tol Tolerance for declaring Hessian convergence. For \code{buildbam}, this is multiplied by 100.
@@ -44,8 +44,8 @@ buildmerControl <- function (
 	args=list(),
 	direction=c('order','backward'),
 	cl=NULL,
-	crit='LRT',
-	elim='LRT',
+	crit=NULL,
+	elim=NULL,
 	fit=function (...) stop('No fitting function specified'),
 	include=NULL,
 	quiet=FALSE,
@@ -74,7 +74,6 @@ buildmerControl <- function (
 		mc <- lapply(mc,eval,parent.frame())
 	}
 	fm <- formals(buildmerControl)
-	fm <- fm[-length(fm)]
 	fm <- fm[!names(fm) %in% names(mc)]
 	fm <- lapply(fm,eval) #these are all defaults, so no need for env
 	p <- c(mc,fm)
@@ -84,7 +83,7 @@ buildmerControl <- function (
 buildmer.prep <- function (mc,add,banned) {
 	e <- parent.frame(2)
 
-	# Check arguments. Only do the legacy explicit ones, as buildmerControl gives all possible defaults anyway
+	# Check arguments
 	notok <- intersect(names(mc),banned)
 	if (length(notok)) {
 		if (length(notok) > 1) {
@@ -93,8 +92,6 @@ buildmer.prep <- function (mc,add,banned) {
 		stop('Argument ',notok,' is not available for ',mc[[1]])
 	}
 
-	# Add any terms provided by any new buildmerControl argument
-	# Any legacy arguments must override these, as all buildX functions now include a buildmerControl=buildmerControl() default
 	# We need to handle NSE arguments in a special way. They may be in buildmerControl=list(args=list(HERE))
 	saved.nse <- NULL
 	if ('buildmerControl' %in% names(mc)) {
@@ -148,13 +145,30 @@ buildmer.prep <- function (mc,add,banned) {
 		}
 		p$is.gaussian <- p$family$family == 'gaussian' && p$family$link == 'identity'
 	}
+	if (is.null(p$crit)) {
+		if (is.null(p$elim)) {
+			# Both are empty: set them to the LRT default
+			p$crit <- p$elim <- 'LRT'
+		} else {
+			# Copy elim to crit if possible
+			if (is.character(p$elim)) {
+				p$crit <- p$elim
+			} else {
+				p$crit <- 'LRT'
+			}
+		}
+	}
+	if (is.null(p$elim)) {
+		# Copy crit to elim if possible
+		if (is.character(p$crit)) {
+			p$elim <- p$crit
+		} else {
+			p$elim <- 'LRT'
+		}
+	}
 	if (is.function(p$crit)) {
 		p$crit.name <- 'custom'
 	} else {
-		# Was a custom elim provided? If not, then overwrite the default LRT with the matching option (e.g. AIC)
-		if (!'elim' %in% names(mc)) {
-			p$elim <- p$crit
-		}
 		p$crit.name <- p$crit
 		p$crit <- get(paste0('crit.',p$crit)) #no env, because we want it from buildmer's namespace
 	}
@@ -163,6 +177,9 @@ buildmer.prep <- function (mc,add,banned) {
 	} else {
 		p$elim.name <- p$elim
 		p$elim <- get(paste0('elim.',p$elim))
+	}
+	if (p$crit.name != p$elim.name) {
+		warning("Mismatched 'crit'erion (",p$crit.name,") and 'elim'ination function (",p$elim.name,") - are you sure this is correct?")
 	}
 	p$env <- environment(p$formula)
 
