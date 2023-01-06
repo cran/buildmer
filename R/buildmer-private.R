@@ -3,7 +3,9 @@ buildmer.fit <- function (p) {
 	if (is.list(p$formula)) {
 		if (is.data.frame(p$formula)) {
 			p$tab <- p$formula
-			if (is.null(p$dep)) stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
+			if (is.null(p$dep)) {
+				stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
+			}
 			p$formula <- build.formula(p$dep,p$tab,p$env)
 		} else {
 			stop("The 'formula' argument appears to be a list, but it does not seem to be a buildmer terms list (because those should be dataframes, which your formula isn't). The buildmer functions only work with regular formulas or with buildmer terms lists obtained from tabulate.formula(). If you got here trying to fit a multi-formula GAM, use buildcustom() to provide your own wrapper function around it - buildmer doesn't know how to manipulate mgcv's list formulas natively.")
@@ -117,31 +119,49 @@ calcWald <- function (table,col.ef,col.df=0) {
 	cbind(table,p)
 }
 
-check.ddf <- function (ddf) {
-	if (is.null(ddf)) return('Wald')
-	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger','KR','S')
+check.ddf <- function (model,ddf) {
+	if (is.null(ddf)) {
+		return('Wald')
+	}
+	valid <- c('Wald','lme4','Satterthwaite','Kenward-Roger','KR')
 	i <- pmatch(ddf,valid)
 	if (is.na(i)) {
 		warning("Invalid ddf specification, possible options are 'Wald', 'lme4', 'Satterthwaite', 'Kenward-Roger'")
-		return('lme4')
+		ddf <- 'lme4'
+	} else {
+		ddf <- valid[i]
+		if ('ddf' == 'KR') {
+			ddf <- 'Kenward-Roger'
+		}
 	}
-	ddf <- valid[i]
-	if (ddf %in% c('Wald','lme4')) return(ddf)
+
+	if (ddf %in% c('Wald','lme4')) {
+		return(ddf)
+	} else {
+		fam <- family(model)$family
+		if (fam %in% c('binomial','poisson')) {
+			warning('Denominator degrees of freedom do not apply to binomial or Poisson models, as those models have a known scale parameter; returning exact ddf instead')
+			return('lme4')
+		}
+		if (startsWith(fam,'Negative Binomial')) {
+			warning('Satterthwaite/Kenward-Roger denominator degrees of freedom are not available for negative binomial models; returning Wald ddf instead')
+			return('lme4') #not Wald -> glmer.nb already does Wald itself
+		}
+		if (fam != 'gaussian' && ddf == 'Kenward-Roger') {
+			warning('Kenward-Roger denominator degrees of freedom are only available for *linear* mixed models; returning Satterthwaite ddf instead')
+			ddf <- 'Satterthwaite'
+		}
+	}
+
 	if (!requireNamespace('lmerTest',quietly=TRUE)) {
-		warning('lmerTest package is not available, could not calculate requested denominator degrees of freedom')
+		warning('lmerTest package is not available, could not calculate ',ddf,' denominator degrees of freedom')
 		return('lme4')
-	}
-	if (ddf == 'KR') {
-		ddf <- 'Kenward-Roger'
-	}
-	if (ddf == 'S') {
-		ddf <- 'Satterthwaite'
 	}
 	if (ddf == 'Kenward-Roger' && !requireNamespace('pbkrtest',quietly=TRUE)) {
 		warning('pbkrtest package is not available, could not calculate Kenward-Roger denominator degrees of freedom')
 		return('lme4')
 	}
-	return(ddf)
+	ddf
 }
 
 decompose.random.terms <- function (terms) {

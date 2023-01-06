@@ -26,12 +26,15 @@ backward <- function (p) {
 	}
 
 	iter <- 0
+	check.random <- function (fun,tab) {
+		any(sapply(unique(tab$block),function (b) {
+			i <- which(tab$block == b)
+			fun(!is.na(tab[i,'grouping']))
+		}))
+	}
 	repeat {
-		need.ml <- !p$force.reml
-		need.reml <- p$force.reml || (p$can.use.reml && any(sapply(unique(p$tab$block),function (b) {
-			i <- which(p$tab$block == b)
-			any(!is.na(p$tab[i,'grouping']))
-		})))
+		need.ml   <- !p$force.reml || !check.random(all,p$tab)
+		need.reml <-  p$force.reml ||  check.random(any,p$tab)
 		if (need.ml && need.reml && is.null(p$cur.ml) && is.null(p$cur.reml)) {
 			p <- fit.references.parallel(p)
 		} else {
@@ -42,7 +45,9 @@ backward <- function (p) {
 				conv <- converged(p$cur.ml,p$singular.ok,p$grad.tol,p$hess.tol)
 				if (!conv) {
 					p <- reduce.model(p,conv)
-					if (!any(!is.na(p$tab$block))) return(p)
+					if (!any(!is.na(p$tab$block))) {
+						return(p)
+					}
 					p <- fit.references.parallel(p)
 				}
 			}
@@ -53,7 +58,9 @@ backward <- function (p) {
 				conv <- converged(p$cur.reml,p$singular.ok,p$grad.tol,p$hess.tol)
 				if (!conv) {
 					p <- reduce.model(p,conv)
-					if (!any(!is.na(p$tab$block))) return(p)
+					if (!any(!is.na(p$tab$block))) {
+						return(p)
+					}
 					p <- fit.references.parallel(p)
 				}
 			}

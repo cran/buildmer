@@ -52,7 +52,16 @@ crit.F <- function (p,ref,alt) {
 	if (Fval <= 0 || ndf <= 0) {
 		return(log1p(abs(Fval))) #gives the order step some idea of which model is the least unhelpful
 	}
-	if (alt$scale.estimated) {
+	scale.est <- if (is.na(p$scale.est)) {
+		if ('scale.estimated' %in% names(alt)) {
+			alt$scale.estimated
+		} else {
+			TRUE #not special-cased, not binomial or poisson --> true by default
+		}
+	} else {
+		p$scale.est
+	}
+	if (scale.est) {
 		stats::pf(Fval,ndf,ddf,lower.tail=FALSE,log.p=TRUE)
 	} else {
 		stats::pchisq(ndf*Fval,ndf,lower.tail=FALSE,log.p=TRUE)

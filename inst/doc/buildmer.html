@@ -702,7 +702,6 @@ al. (2017)</span>.</p>
 ## 14        word                 timepoint                  NA word timepoint         1 2.198802e-153
 ## All terms are significant
 ## Finalizing by converting the model to lmerTest</code></pre>
-<pre><code>## Warning in call[x] &lt;- p$call$args[[x]]: number of items to replace is not a multiple of replacement length</code></pre>
 <p>It appears that in this example, all terms were significant in
 backward-stepwise elimination.</p>
 <p>By default, <code>buildmer</code> automatically calculates summary
@@ -714,7 +713,7 @@ research question, we look at the summary:</p>
 ## Formula: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint +  
 ##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following |      participant)
 ##    Data: vowels
-## Control: lmerControl
+## Control: lmerControl(optimizer = &quot;bobyqa&quot;)
 ## 
 ## REML criterion at convergence: 149448.9
 ## 

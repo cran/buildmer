@@ -3,6 +3,24 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.8 (2023-01-06)
+
+* New control option in buildmerControl(): scale.est. Mostly for internal
+  use. Fixes crit.deviance/crit.F not working on non-gam models. Thanks to
+  Sarah Rösch for reporting the bug.
+* Slightly rearrange buildmerControl() options.
+* Update checking logic for ddf option. It now raises a more informative
+  message if the user attempts to use lmerTest ddf with negative-binomial
+  models.
+* Add support for optional 'crit.name' and 'elim.name' attributes for custom
+  (i.e. function) 'crit' and 'elim' arguments. Fixes an unnecessary warning
+  about mismatched crit and elim when LRTalpha() is used. Thanks to Juris
+  Breidaks.
+* backward() no longer fits an unnecessary ML model if all terms to be
+  compared are r.e. terms.
+. Fix a [ vs [[ decision in the patcher functions, which turned out to (a)
+  cause problems and (b) be unnecessary. Thanks to Alexandra Pike.
+
 2.7 (2022-10-20)
 
 * An informative error is now thrown if the user attempts to use
