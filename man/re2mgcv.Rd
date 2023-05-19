@@ -4,12 +4,14 @@
 \alias{re2mgcv}
 \title{Convert lme4 random-effect terms to mgcv 're' smooths}
 \usage{
-re2mgcv(formula, data)
+re2mgcv(formula, data, drop = TRUE)
 }
 \arguments{
 \item{formula}{The lme4 formula.}
 
 \item{data}{The data.}
+
+\item{drop}{Logical indicating whether constant, non-intercept columns should be dropped. Default \code{TRUE}. A warning is issued if a column needed to be dropped. Note that repeated intercept columns are silently merged without a warning.}
 }
 \description{
 Convert lme4 random-effect terms to mgcv 're' smooths

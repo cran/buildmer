@@ -120,7 +120,7 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 #' @param model The model object to test.
 #' @param singular.ok A logical indicating whether singular fits are accepted as `converged' or not. Relevant only for lme4 models.
 #' @param grad.tol The tolerance to use for checking the gradient. This is currently only used by mgcv, glmmTMB, and clm(m) models.
-#' @param hess.tol The tolerance to use for checking the Hessian for negative eigenvalues. This is currently only used by mgcv, glmmTMB, and clm(m) models.
+#' @param hess.tol The tolerance to use for checking the Hessian for negative eigenvalues. This is currently only used by mgcv, glmmTMB, and cl(m)m models.
 #' @return Logical indicating whether the model converged.
 #' @examples
 #' library(buildmer)
@@ -142,6 +142,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 	#eigen sometimes returns complex vectors; https://lists.r-forge.r-project.org/pipermail/adegenet-forum/2013-November/000719.html
 	eigval  <- function (...) suppressWarnings(as.numeric(eigen(...)$values))
 	if (inherits(model,'try-error')) return(failure(model))
+	if (inherits(model,'buildmer')) return(converged(model@model))
 	if (inherits(model,'gam')) {
 		if (!is.null(model$mgcv.conv)) {
 			if (is.logical(model$mgcv.conv)) {
@@ -170,15 +171,16 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 	}
 	if (inherits(model,'merMod')) {
 		if ((err <- model@optinfo$conv$opt) != 0) return(failure('Optimizer reports not having finished',err))
-		if (!length(model@optinfo$conv$lme4)) return(success('No lme4 info available -- succeeding by default (dangerous!)'))
-		if (is.null(model@optinfo$conv$lme4$code) && !singular.ok) return(failure('Singular fit'))
-		if (any((err <- model@optinfo$conv$lme4$code) != 0)) return(failure('lme4 reports not having converged',err))
+		if (length(model@optinfo$conv$lme4)) {
+			if (is.null(model@optinfo$conv$lme4$code) && !singular.ok) return(failure('Singular fit'))
+			if (any((err <- model@optinfo$conv$lme4$code) != 0)) return(failure('lme4 reports not having converged',err))
+		}
 		if (is.null(model@optinfo$derivs)) return(success('No derivative information available -- succeeding by default (dangerous!)'))
 		grad <- model@optinfo$derivs$gradient
 		hess <- model@optinfo$derivs$Hessian
 		scaled.grad <- try(solve(hess,grad),silent=TRUE)
 		if (inherits(scaled.grad,'try-error')) return(failure('Manual gradient checks were unable to compute scaled gradient',ev))
-		if ((err <- max(pmin(abs(scaled.grad),abs(grad)))) > grad.tol) return(failure(paste0('Gradient contains found values >',grad.tol),err))
+		if ((err <- max(pmin(abs(scaled.grad),abs(grad)))) > grad.tol) return(failure(paste0('Absolute gradient contains values >',grad.tol),err))
 		err <- try(min(eigval(hess)),silent=TRUE)
 		if (inherits(err,'try-error')) return(failure('Eigenvalue decomposition of Hessian failed',err))
 		if (err < -hess.tol) return(failure(paste0('Hessian contains negative eigenvalues <',-hess.tol),err))
@@ -230,6 +232,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 #' Convert lme4 random-effect terms to mgcv 're' smooths
 #' @param formula The lme4 formula.
 #' @param data The data.
+#' @param drop Logical indicating whether constant, non-intercept columns should be dropped. Default \code{TRUE}. A warning is issued if a column needed to be dropped. Note that repeated intercept columns are silently merged without a warning.
 #' @examples
 #' library(buildmer)
 #' re <- re2mgcv(temp ~ angle + (1|replicate) + (1|recipe),lme4::cake)
@@ -238,7 +241,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 #' \dontshow{if (FALSE)}
 #' re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)
 #' @export
-re2mgcv <- function (formula,data) {
+re2mgcv <- function (formula,data,drop=TRUE) {
 	e <- environment(formula)
 	dep <- as.character(formula[[2]])
 	data <- data[!is.na(data[[dep]]),]
@@ -248,7 +251,9 @@ re2mgcv <- function (formula,data) {
 	formula <- formula[fixed,]
 	org.names <- names(data)
 	for (g in unique(random$grouping)) {
-		if (!g %in% names(data)) stop('No factor named "',g,'" in your data')
+		if (!g %in% names(data)) {
+			stop('No factor named "',g,'" in your data')
+		}
 		data[[g]] <- factor(data[[g]])
 		tab <- random[random$grouping == g,]
 		tab$index <- tab$grouping <- NA
@@ -256,12 +261,18 @@ re2mgcv <- function (formula,data) {
 		terms <- model.matrix(f,data)
 		nms <- gsub('[():]','_',colnames(terms))
 		for (i in 1:ncol(terms)) {
-			if (all(terms[,i] == 1)) {
+			ti <- terms[[i]]
+			if (all(ti == 1)) {
 				term <- paste0('s(',g,',bs="re")')
+			} else if (all(ti == ti[1]) && drop) {
+				warning('Dropping constant column ',colnames(terms)[i],'|',g,', which is all ',ti[1])
+				next
 			} else {
 				nm <- paste0(g,'_',nms[i])
-				if (nm %in% org.names) stop('Error: please remove/rename ',nm,' from your data!')
-				data[[nm]] <- terms[,i]
+				if (nm %in% org.names) {
+					stop('Name clash: please remove/rename ',nm,' from your data')
+				}
+				data[[nm]] <- ti
 				term <- paste0('s(',g,',',nm,',bs="re")')
 			}
 			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=FALSE)

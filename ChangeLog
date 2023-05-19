@@ -3,6 +3,18 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.9 (2023-05-19)
+
+* re2mgcv() now detects and suppresses constant r.e. predictors. An optional
+  'drop' argument (default TRUE) allows for this new behavior to be turned off
+  (which is done by setting 'drop' to FALSE).
+* converged() no longer incorrectly bails out early if lme4 did not provide
+  convergence information.
+* converged() can now be called on buildmer models.
+. Correct processing of crit.name and elim.name.
+. Due to glmertree updates, the buildmertree test results have changed to a
+  *near*-singular convergence. The test has been updated to account for this.
+
 2.8 (2023-01-06)
 
 * New control option in buildmerControl(): scale.est. Mostly for internal
@@ -60,8 +72,8 @@
     function call has been removed (deprecated since 2020-06-05). In addition,
     passing extra arguments to the fitting function in ... has been removed.
     (deprecated since 2021-08-13). For both, 'buildmerControl' is the
-    replacement (use its 'args' argument for the former; use it itself for the
-    latter).
+    replacement (use its 'args' argument for the latter; use it itself for the
+    former).
 . Fix a bug preventing random-effect terms from expanding properly, thereby
   breaking e.g. the common nesting syntax for random effects. Thanks to
   Jonathan Richir.

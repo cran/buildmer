@@ -186,7 +186,7 @@ buildmer.prep <- function (mc,add,banned) {
 		}
 	}
 	if (is.function(p$crit)) {
-		if (is.null(p$crit.name <- attr(p$crit,'name'))) {
+		if (is.null(p$crit.name <- attr(p$crit,'crit.name'))) {
 			p$crit.name <- 'custom'
 		}
 	} else {
@@ -194,7 +194,7 @@ buildmer.prep <- function (mc,add,banned) {
 		p$crit <- get(paste0('crit.',p$crit)) #no env, because we want it from buildmer's namespace
 	}
 	if (is.function(p$elim)) {
-		if (is.null(p$elim.name <- attr(p$elim,'name'))) {
+		if (is.null(p$elim.name <- attr(p$elim,'elim.name'))) {
 			p$elim.name <- 'custom'
 		}
 	} else {

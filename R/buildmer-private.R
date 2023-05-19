@@ -4,7 +4,7 @@ buildmer.fit <- function (p) {
 		if (is.data.frame(p$formula)) {
 			p$tab <- p$formula
 			if (is.null(p$dep)) {
-				stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument to your buildmer() or related function call")
+				stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument using buildmerControl()")
 			}
 			p$formula <- build.formula(p$dep,p$tab,p$env)
 		} else {

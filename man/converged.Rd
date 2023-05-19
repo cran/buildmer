@@ -13,7 +13,7 @@ converged(model, singular.ok = FALSE, grad.tol = 0.1, hess.tol = 0.01)
 
 \item{grad.tol}{The tolerance to use for checking the gradient. This is currently only used by mgcv, glmmTMB, and clm(m) models.}
 
-\item{hess.tol}{The tolerance to use for checking the Hessian for negative eigenvalues. This is currently only used by mgcv, glmmTMB, and clm(m) models.}
+\item{hess.tol}{The tolerance to use for checking the Hessian for negative eigenvalues. This is currently only used by mgcv, glmmTMB, and cl(m)m models.}
 }
 \value{
 Logical indicating whether the model converged.
