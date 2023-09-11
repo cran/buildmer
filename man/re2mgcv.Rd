@@ -19,7 +19,7 @@ Convert lme4 random-effect terms to mgcv 're' smooths
 \examples{
 library(buildmer)
 re <- re2mgcv(temp ~ angle + (1|replicate) + (1|recipe),lme4::cake)
-model <- buildgam(re$formula,re$data,family=mgcv::scat)
+model <- buildgam(re$formula,re$data)
 # note: the below does NOT work, as the dependent variable is looked up in the data by name!
 \dontshow{if (FALSE)}
 re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)

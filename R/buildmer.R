@@ -4,9 +4,6 @@
 #' @template family
 #' @template control
 #' @examples
-#' \dontshow{
-#' if (requireNamespace('GLMMadaptive')) model <- buildGLMMadaptive(stress ~ (1|word),family=binomial,data=vowels,buildmerControl=list(args=list(nAGQ=1)))
-#' }
 #' \donttest{
 #' if (requireNamespace('GLMMadaptive')) {
 #' # nonsensical model given these data
@@ -64,7 +61,7 @@ buildbam <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildm
 		stop("To enable buildbam to work around a problem in bam, please remove or rename the column named 'intercept' from your data")
 	}
 	if (!p$I_KNOW_WHAT_I_AM_DOING && !p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT','LL'))) {
-		stop(progress(p,"bam uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using buildgam instead, use crit='F', or use crit='deviance' (note that the latter is not a formal test). (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
+		stop(progress(p,"bam uses PQL, which means that likelihood-based model comparisons are not valid in the generalized case. Try using crit='F' instead (this uses the significance of the change in R-squared), or if you really need likelihood-based model comparisons, use buildgamm4. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
 	}
 	f <- formals(converged)
 	if (p$grad.tol == f$grad.tol) {
@@ -185,8 +182,8 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,buildmerC
 	if (is.null(p$data)) stop('Sorry, buildgam requires data to be passed via the data= argument')
 	if ('intercept' %in% names(p$data)) stop("To enable buildgam to work around a problem in gam, please remove or rename the column named 'intercept' from your data")
 	if (!p$I_KNOW_WHAT_I_AM_DOING) {
-		if (!p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT')) && !is.null(p$args$optimizer[1]) && p$args$optimizer[1] != 'outer') {
-		       stop(progress(p,"You are trying to use buildgam using performance iteration or the EFS optimizer. In this situation, gam uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))), use crit='deviance' (note that the latter is not a formal test) or crit='F', or find a way to fit your model using Gaussian errors. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
+		if (!p$is.gaussian && any(p$crit.name %in% c('AIC','BIC','LRT','LL','2LL'))) {
+		       stop(progress(p,"You are trying to use buildgam with a generalized model, and you have specified a likelihood-based criterion. gam uses PQL, which means that likelihood-based model comparisons are invalid. Try using crit='F' instead (this uses the significance of the change in R-squared), or if you really need likelihood-based model comparisons, use buildgamm4. (If you really know what you are doing, you can sidestep this error by passing I_KNOW_WHAT_I_AM_DOING=TRUE.)"))
 		}
 		if (inherits(p$family,'general.family')) {
 			if (p$quickstart) {
@@ -230,7 +227,7 @@ buildgam <- function (formula,data=NULL,family=gaussian(),quickstart=0,buildmerC
 buildgamm <- function (formula,data=NULL,family=gaussian(),buildmerControl=buildmerControl()) {
 	p <- buildmer.prep(match.call(),add=list(fit=fit.gamm,scale.est=TRUE),banned='ddf')
 	if (!p$is.gaussian && !p$I_KNOW_WHAT_I_AM_DOING) {
-		stop("You are trying to use buildgamm with a non-Gaussian error family. In this situation, gamm uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using buildgam with outer iteration instead (e.g. buildgam(...,optimizer=c('outer','bfgs'))), or use crit='F' or crit='deviance' (note that the latter is not a formal test). (If you really know what you are doing, you can sidestep this error by passing an argument 'I_KNOW_WHAT_I_AM_DOING'.)")
+		stop("You are trying to use buildgamm with a non-Gaussian error family. gamm uses PQL, which means that likelihood-based model comparisons are invalid in the generalized case. Try using crit='F' instead (this uses the significance of the change in R-squared), or if you really need likelihood-based model comparisons, use buildgamm4. (If you really know what you are doing, you can sidestep this error by passing an argument 'I_KNOW_WHAT_I_AM_DOING'.)")
 	}
 	p$finalize <- FALSE
 	p <- buildmer.fit(p)

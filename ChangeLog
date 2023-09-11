@@ -3,6 +3,19 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.10 (2023-09-11)
+
+*** Development has been migrated from GitHub to GitLab.
+* The PQL guard now also blocks gam with outer iteration in the generalized
+  case.
+. remove.terms() now correctly removes the intercept if asked to.
+. The error about providing a tabulated formula without a 'dep' argument in
+  buildmerControl() is now disabled if I_KNOW_WHAT_I_AM_DOING is TRUE.
+. A bug was fixed in re2mgcv() which made it unable to produce non-intercept
+  columns.
+. Backward elimination now no longer erroneously fits an ML reference model if
+  REML is forced on.
+
 2.9 (2023-05-19)
 
 * re2mgcv() now detects and suppresses constant r.e. predictors. An optional
@@ -38,7 +51,7 @@
 * An informative error is now thrown if the user attempts to use
   buildmerControl incorrectly.
 * Singularity checks for lme models.
-* remove.terms now has an optional 'check' argument (default TRUE) through
+* remove.terms() now has an optional 'check' argument (default TRUE) through
   which the user can disable marginality checks, causing it to unconditionally
   remove terms from the formula.
 * buildmer now always converts lme4 models to lmerTest, if lmerTest is

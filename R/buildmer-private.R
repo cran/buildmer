@@ -3,7 +3,7 @@ buildmer.fit <- function (p) {
 	if (is.list(p$formula)) {
 		if (is.data.frame(p$formula)) {
 			p$tab <- p$formula
-			if (is.null(p$dep)) {
+			if (is.null(p$dep) && !p$I_KNOW_WHAT_I_AM_DOING) {
 				stop("The 'formula' argument was specified using a buildmer terms list, but no dependent variable was specified using the 'dep' argument; please add a 'dep' argument using buildmerControl()")
 			}
 			p$formula <- build.formula(p$dep,p$tab,p$env)
@@ -44,7 +44,6 @@ buildmer.fit <- function (p) {
 	} else {
 		# Default case, in which case one optimization can be applied:
 		if (all(p$crit.name %in% c('deviance','devexp','F'))) {
-			p$can.use.reml <- FALSE
 			p$force.reml <- TRUE
 		}
 	}

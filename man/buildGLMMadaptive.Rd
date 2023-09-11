@@ -31,9 +31,6 @@ As GLMMadaptive can only fit models with a single random-effect grouping factor,
 If multiple \emph{identical} random-effect grouping factors are provided, they will be concatenated into a single grouping factor using the double-bar syntax, causing GLMMadaptive to assume a diagonal random-effects covariance matrix. In other words, \code{(1|g) + (0+x|g)} will correctly be treated as diagonal, but note the caveat: \code{(a|g) + (b|g)} will also be treated as fully diagonal, even if \code{a} and \code{b} are factors which might still have had correlations between their individual levels! This is a limitation of both GLMMadaptive and buildmer's approach to handling double bars.
 }
 \examples{
-\dontshow{
-if (requireNamespace('GLMMadaptive')) model <- buildGLMMadaptive(stress ~ (1|word),family=binomial,data=vowels,buildmerControl=list(args=list(nAGQ=1)))
-}
 \donttest{
 if (requireNamespace('GLMMadaptive')) {
 # nonsensical model given these data

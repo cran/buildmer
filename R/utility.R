@@ -236,7 +236,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 #' @examples
 #' library(buildmer)
 #' re <- re2mgcv(temp ~ angle + (1|replicate) + (1|recipe),lme4::cake)
-#' model <- buildgam(re$formula,re$data,family=mgcv::scat)
+#' model <- buildgam(re$formula,re$data)
 #' # note: the below does NOT work, as the dependent variable is looked up in the data by name!
 #' \dontshow{if (FALSE)}
 #' re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)
@@ -258,21 +258,21 @@ re2mgcv <- function (formula,data,drop=TRUE) {
 		tab <- random[random$grouping == g,]
 		tab$index <- tab$grouping <- NA
 		f <- build.formula(dep,tab,e)
-		terms <- model.matrix(f,data)
-		nms <- gsub('[():]','_',colnames(terms))
-		for (i in 1:ncol(terms)) {
-			ti <- terms[[i]]
-			if (all(ti == 1)) {
+		mm <- model.matrix(f,data)
+		nms <- gsub('[():]','_',colnames(mm))
+		for (i in seq_along(nms)) {
+			mi <- mm[,i]
+			if (all(mi == 1)) {
 				term <- paste0('s(',g,',bs="re")')
-			} else if (all(ti == ti[1]) && drop) {
-				warning('Dropping constant column ',colnames(terms)[i],'|',g,', which is all ',ti[1])
+			} else if (all(mi == mi[1]) && drop) {
+				warning('Dropping constant column ',colnames(mm)[i],'|',g,', which is all ',mi[1])
 				next
 			} else {
 				nm <- paste0(g,'_',nms[i])
 				if (nm %in% org.names) {
 					stop('Name clash: please remove/rename ',nm,' from your data')
 				}
-				data[[nm]] <- ti
+				data[[nm]] <- mi
 				term <- paste0('s(',g,',',nm,',bs="re")')
 			}
 			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=FALSE)
@@ -382,8 +382,13 @@ remove.terms <- function (formula,remove,check=TRUE) {
 	terms <- Filter(Negate(is.null),terms)
 
 	# Wrap up
-	if (length(terms)) return(stats::as.formula(paste0(dep,'~',paste(terms,collapse='+')),environment(formula)))
-	stats::as.formula(paste0(dep,'~1'),environment(formula))
+	if (length(terms)) {
+		if (!intercept) {
+			terms <- c('0',terms)
+		}
+		return(stats::as.formula(paste0(dep,'~',paste(terms,collapse='+')),environment(formula)))
+	}
+	stats::as.formula(if (intercept) '~1' else '~0',environment(formula))
 }
 
 #' Parse a formula into a buildmer terms list

@@ -38,7 +38,7 @@ NSENAMES <- c('weights','offset','AR.start','control','subset')
 #' @param scale.est Internal option specifying whether the model estimates an unknown scale parameter. Used only in \code{crit.F}. Possible values are \code{TRUE} (scale is estimated), \code{FALSE} (scale is known), and \code{NA} (unknown, needs to be inferred from the fitted model; this is the default). There is limited support for modifying this parameter.
 #' @param I_KNOW_WHAT_I_AM_DOING An internal option that you should not modify unless you know what you are doing.
 #' @export
-buildmerControl <- function (
+buildmerControl <- function(
 	formula=quote(stop('No formula specified')),
 	data=NULL,
 	family=gaussian(),
@@ -47,7 +47,7 @@ buildmerControl <- function (
 	cl=NULL,
 	crit=NULL,
 	elim=NULL,
-	fit=function (...) stop('No fitting function specified'),
+	fit=function(...) stop('No fitting function specified'),
 	include=NULL,
 	quiet=FALSE,
 	calc.anova=FALSE,
@@ -55,8 +55,8 @@ buildmerControl <- function (
 	ddf='Wald',
 	quickstart=0,
 	singular.ok=FALSE,
-	grad.tol=formals(buildmer::converged)$grad.tol,
-	hess.tol=formals(buildmer::converged)$hess.tol,
+	grad.tol=formals(converged)$grad.tol,
+	hess.tol=formals(converged)$hess.tol,
 	dep=NULL,
 	REML=NA,
 	can.use.reml=TRUE,
@@ -82,7 +82,7 @@ buildmerControl <- function (
 	p
 }
 
-buildmer.prep <- function (mc,add,banned) {
+buildmer.prep <- function(mc,add,banned) {
 	e <- parent.frame(2)
 
 	# Check arguments
