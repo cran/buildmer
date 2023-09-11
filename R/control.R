@@ -55,8 +55,8 @@ buildmerControl <- function(
 	ddf='Wald',
 	quickstart=0,
 	singular.ok=FALSE,
-	grad.tol=formals(converged)$grad.tol,
-	hess.tol=formals(converged)$hess.tol,
+	grad.tol=formals(buildmer::converged)$grad.tol, #these need buildmer:: namespacing to not break packages that import buildmer --- those do not transitively inherit the buildmer environment
+	hess.tol=formals(buildmer::converged)$hess.tol,
 	dep=NULL,
 	REML=NA,
 	can.use.reml=TRUE,

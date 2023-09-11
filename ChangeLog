@@ -3,6 +3,11 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.10.1 (2023-09-11)
+
+. Fix bug introduced in v2.10 involving namespacing that caused an error when
+  trying to call buildmerControl() from other packages.
+
 2.10 (2023-09-11)
 
 *** Development has been migrated from GitHub to GitLab.

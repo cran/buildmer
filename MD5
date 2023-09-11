@@ -1,10 +1,10 @@
-1532d14b5828ab6e7c1cedf8f78087ef *ChangeLog
-21cb2fd8d2bbafbe145e8baa7a94218e *DESCRIPTION
+90e20eab57c9410d9c5512d027859a41 *ChangeLog
+e3c2b2344c11ebbcef47721697914de4 *DESCRIPTION
 026183defee8a3337b6c0774f9a705ca *NAMESPACE
 ce164e4c05eec56418aa13bdc8d4201a *R/buildmer-S4.R
 279d97dd3fe2bc25dca668462e3e0285 *R/buildmer-private.R
 dd3da8d0fea2ca4b7362defd97e2db02 *R/buildmer.R
-34cc8228880234cd2b2a3508cf5216e2 *R/control.R
+ea5a474e26ae7020e4d51003301cc3b9 *R/control.R
 9cd22d3983701b465a5e32fa9bf4f67d *R/directions.R
 529a74c8798c44cbcd31e96a614a3d29 *R/elim.R
 1edd62719bed4b095a61b594c201a361 *R/fitters.R
@@ -34,7 +34,7 @@ b26b07291d80546d732903f2899886fe *man/buildlme.Rd
 18839e1bd23a8442e33f9fd8dfcb7f8f *man/buildmer-package.Rd
 43bd4e1c0c6e984a9edc676f5a973e2a *man/buildmer.Rd
 b95bedac26bd9a08a2221173ca54b1fb *man/buildmer.nb.Rd
-4843821c4e919bbe1d5f22363a670c94 *man/buildmerControl.Rd
+3d14b61246d22a69c6431754cf676ae3 *man/buildmerControl.Rd
 d31875539f655af1d67abb2bf474f57f *man/buildmertree.Rd
 482aa05eda8c1453b3f79c851e22c6af *man/buildmultinom.Rd
 fb048bc3e6bd488e17b289b291f099c2 *man/converged.Rd
