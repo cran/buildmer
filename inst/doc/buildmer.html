@@ -713,7 +713,16 @@ research question, we look at the summary:</p>
 ## Formula: f1 ~ following + vowel + timepoint + vowel:timepoint + following:timepoint +  
 ##     (1 + timepoint | word) + (1 + timepoint + following + timepoint:following |      participant)
 ##    Data: vowels
-## Control: lmerControl(optimizer = &quot;bobyqa&quot;)
+## Control: structure(list(optimizer = &quot;bobyqa&quot;, restart_edge = TRUE, boundary.tol = 1e-05,  
+##     calc.derivs = TRUE, use.last.params = FALSE, checkControl = list( 
+##         check.nobs.vs.rankZ = &quot;ignore&quot;, check.nobs.vs.nlev = &quot;stop&quot;,  
+##         check.nlev.gtreq.5 = &quot;ignore&quot;, check.nlev.gtr.1 = &quot;stop&quot;,  
+##         check.nobs.vs.nRE = &quot;stop&quot;, check.rankX = &quot;message+drop.cols&quot;,  
+##         check.scaleX = &quot;warning&quot;, check.formula.LHS = &quot;stop&quot;),  
+##     checkConv = list(check.conv.grad = list(action = &quot;warning&quot;,  
+##         tol = 0.002, relTol = NULL), check.conv.singular = list( 
+##         action = &quot;message&quot;, tol = 1e-04), check.conv.hess = list( 
+##         action = &quot;warning&quot;, tol = 1e-06)), optCtrl = list()), class = c(&quot;lmerControl&quot;,  &quot;merControl&quot;))
 ## 
 ## REML criterion at convergence: 149448.9
 ## 

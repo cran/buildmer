@@ -44,6 +44,7 @@ buildmer.fit <- function (p) {
 	} else {
 		# Default case, in which case one optimization can be applied:
 		if (all(p$crit.name %in% c('deviance','devexp','F'))) {
+			p$can.use.reml <- FALSE
 			p$force.reml <- TRUE
 		}
 	}
@@ -57,6 +58,8 @@ buildmer.fit <- function (p) {
 		p$parallel <- TRUE
 		p$parply <- function (x,fun,...) parallel::parLapply(p$cl,x,fun,...)
 		if (is.numeric(p$cl)) {
+			# The control argument is the only argument in NSENAMES that is not really an NSE argument (we just want to maintain its expression form for later use by the patchers). Evaluate this here (necessity reported by Rebecca Bieber).
+			p$args$control <- eval(p$args$control,p$env)
 			p$cl <- parallel::makeCluster(p$cl,outfile='')
 			cleanup.cluster <- TRUE
 		} else {

@@ -1,4 +1,4 @@
-NSENAMES <- c('weights','offset','AR.start','control','subset')
+NSENAMES <- c('weights','offset','AR.start','subset')
 
 #' Set control options for buildmer
 #' 

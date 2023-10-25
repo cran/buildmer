@@ -3,6 +3,17 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.11 (2023-10-24)
+
+*** Revert a change introduced in v2.10 that sometimes caused comparisons
+    between models to be based on REML where this was not correct (due to
+    differences being present between the fixed-effect structures). Thanks to
+    Paul Warren for the report.
+* 'control' is no longer treated as an NSE argument (but it is still getting
+  properly patched by the patcher functions). This fixes the argument being
+  evaluated too late when offloading fitting to clusters using the 'cl'
+  argument to buildmerControl(). Bug reported by Rebecca Bieber.
+
 2.10.1 (2023-09-11)
 
 . Fix bug introduced in v2.10 involving namespacing that caused an error when

@@ -33,8 +33,8 @@ backward <- function (p) {
 		}))
 	}
 	repeat {
-		need.ml   <- !p$can.use.reml || (!p$force.reml && !check.random(all,p$tab))
-		need.reml <-  p$can.use.reml && ( p$force.reml ||  check.random(any,p$tab))
+		need.ml   <- !p$force.reml || !check.random(all,p$tab)
+		need.reml <-  p$force.reml ||  check.random(any,p$tab)
 		if (need.ml && need.reml && is.null(p$cur.ml) && is.null(p$cur.reml)) {
 			p <- fit.references.parallel(p)
 		} else {
@@ -81,17 +81,13 @@ backward <- function (p) {
 				# cannot remove term due to marginality
 				return(list(val=rep(NA,length(i))))
 			}
-			if (p$can.use.reml) {
-				if (p$force.reml || all(!is.na(p$tab[i,]$grouping))) {
-					p$reml <- TRUE
-				} else {
-					# REML is still going to be needed if comparing a 1-re model to a 0-re model
-					p$reml <- need.reml
-				}
+			if (p$force.reml) {
+				p$reml <- TRUE
+				m.cur <- p$cur.reml
 			} else {
-				p$reml <- FALSE
+				p$reml <- p$can.use.reml && all(!is.na(p$tab[i,]$grouping))
+				m.cur <- if (need.reml && p$reml) p$cur.reml else p$cur.ml
 			}
-			m.cur <- if (p$reml) p$cur.reml else p$cur.ml
 			f.alt <- build.formula(p$dep,p$tab[-i,],p$env)
 			m.alt <- p$fit(p,f.alt)
 			val <- if (converged(m.alt,p$singular.ok,p$grad.tol,p$hess.tol)) p$crit(p,m.alt,m.cur) else NaN
