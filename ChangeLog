@@ -3,6 +3,11 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.12 (2025-05-11)
+
+. buildmer now imports findbars from reformulas rather than from lme4. Thanks
+  to Ben Bolker for the heads-up.
+
 2.11 (2023-10-24)
 
 *** Revert a change introduced in v2.10 that sometimes caused comparisons

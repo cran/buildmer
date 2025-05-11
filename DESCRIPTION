@@ -1,7 +1,7 @@
 Package: buildmer
 Title: Stepwise Elimination and Term Reordering for Mixed-Effects
         Regression
-Version: 2.11
+Version: 2.12
 Authors@R: person(c("Cesko", "C."), "Voeten", email = "cvoeten@gmail.com", role = c("aut", "cre"), comment = c(ORCID="0000-0003-4687-9973"))
 Description: Finds the largest possible regression model that will still converge
     for various types of regression analyses (including mixed models and generalized
@@ -10,19 +10,20 @@ Description: Finds the largest possible regression model that will still converg
     log-likelihood or its significance, Akaike's Information Criterion, the Bayesian
     Information Criterion, the explained deviance, or the F-test of the change in R².
 Depends: R (>= 3.2)
-Imports: graphics, lme4, methods, mgcv, nlme, stats, utils
+Imports: graphics, lme4, methods, mgcv, nlme, reformulas, stats, utils
 Suggests: GLMMadaptive, MASS, gamm4, glmertree, glmmTMB, knitr,
         lmerTest, nnet, ordinal, parallel, partykit, pbkrtest,
         rmarkdown, testthat
 License: FreeBSD
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 BugReports: https://gitlab.com/cvoeten/buildmer/-/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2023-10-25 00:51:34 UTC; cesko
-Author: Cesko C. Voeten [aut, cre] (<https://orcid.org/0000-0003-4687-9973>)
+Packaged: 2025-05-11 16:40:45 UTC; Cesko
+Author: Cesko C. Voeten [aut, cre] (ORCID:
+    <https://orcid.org/0000-0003-4687-9973>)
 Maintainer: Cesko C. Voeten <cvoeten@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-10-25 04:10:03 UTC
+Date/Publication: 2025-05-11 17:40:02 UTC

@@ -16,9 +16,9 @@ f <- f1 ~ vowel*timepoint*following +
 	 (timepoint | word)
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
-#  library(lme4)
-#  m <- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction='order',
-#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
+# library(lme4)
+# m <- buildmer(f,data=vowels,buildmerControl=buildmerControl(direction='order',
+# 	      args=list(control=lmerControl(optimizer='bobyqa'))))
 
 ## ----echo=FALSE---------------------------------------------------------------------------------------------
 cat('Determining predictor order
@@ -150,8 +150,8 @@ m <- buildmer:::mkBuildmer(model=list(formula=(function () as.formula('f1 ~ foll
 (f <- formula(m@model))
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
-#  m <- buildmer(f,data=vowels,buildmerControl=list(direction='backward',
-#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
+# m <- buildmer(f,data=vowels,buildmerControl=list(direction='backward',
+# 	      args=list(control=lmerControl(optimizer='bobyqa'))))
 
 ## ----echo=FALSE---------------------------------------------------------------------------------------------
 cat('Fitting ML and REML reference models
@@ -210,7 +210,7 @@ form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following +
 terms <- tabulate.formula(form,group='vowel[^:]')
 
 ## ----eval=FALSE---------------------------------------------------------------------------------------------
-#  m <- buildmer(terms,data=vowels,buildmerControl=buildmerControl(dep='f1',
-#  	      args=list(control=lmerControl(optimizer='bobyqa'))))
-#  ## (output not shown)
+# m <- buildmer(terms,data=vowels,buildmerControl=buildmerControl(dep='f1',
+# 	      args=list(control=lmerControl(optimizer='bobyqa'))))
+# ## (output not shown)
 

@@ -183,7 +183,7 @@ decompose.random.terms <- function (terms) {
 }
 
 get.random.list <- function (formula) {
-	bars <- lme4::findbars(formula)
+	bars <- reformulas::findbars(formula)
 	groups <- unique(sapply(bars,function (x) x[[3]]))
 	randoms <- lapply(groups,function (g) {
 		terms <- bars[sapply(bars,function (x) x[[3]] == g)]
