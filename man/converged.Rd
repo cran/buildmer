@@ -2,9 +2,14 @@
 % Please edit documentation in R/utility.r
 \name{converged}
 \alias{converged}
-\title{Test a model for convergence}
+\title{Tests a model for convergence}
 \usage{
-converged(model, singular.ok = FALSE, grad.tol = 0.1, hess.tol = 0.01)
+converged(
+  model,
+  singular.ok = FALSE,
+  grad.tol = if (inherits(model, "bam")) 10 else 0.1,
+  hess.tol = if (inherits(model, "bam")) 10 else 0.01
+)
 }
 \arguments{
 \item{model}{The model object to test.}
@@ -19,7 +24,7 @@ converged(model, singular.ok = FALSE, grad.tol = 0.1, hess.tol = 0.01)
 Logical indicating whether the model converged.
 }
 \description{
-Test a model for convergence
+Tests a model for convergence
 }
 \examples{
 library(buildmer)

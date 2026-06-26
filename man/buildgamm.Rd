@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildgamm}
 \alias{buildgamm}
-\title{Use \code{buildmer} to fit big generalized additive models using \code{gamm} from package \code{mgcv}}
+\title{Uses \code{buildmer} to fit big generalized additive models using \code{gamm} from package \code{mgcv}}
 \usage{
 buildgamm(
   formula,
@@ -12,20 +12,20 @@ buildgamm(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit big generalized additive models using \code{gamm} from package \code{mgcv}
+Uses \code{buildmer} to fit big generalized additive models using \code{gamm} from package \code{mgcv}
 }
 \details{
 The fixed and random effects are to be passed as a single formula in \code{lme4} format. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
-Only a single grouping factor is allowed. The random-effect covariance matrix is always unstructured. If you want to use \code{pdMat} covariance structures, you must (a) \emph{not} specify any \code{lme4} random-effects term in the formula, and (b) specify your own custom \code{random} argument in the \code{args} list in \code{buildmerControl}. Note that \code{buildgamm} will merely pass this through; no term reordering or stepwise elimination is done on a user-provided \code{random} argument.
+Only a single grouping factor is allowed. The random-effect covariance matrix is always unstructured. If you want to use \code{pdMat} covariance structures, you must (a) \emph{not} specify any \code{lme4} random-effects term in the formula, and (b) specify your own custom \code{random} argument in the \code{args} list in \code{\link{buildmerControl}}. Note that \code{buildgamm} will merely pass this through; no term reordering or stepwise elimination is done on a user-provided \code{random} argument.
 }
 \examples{
 \donttest{
@@ -35,5 +35,5 @@ model <- buildgamm(f1 ~ s(timepoint,by=following) + (following|participant) +
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

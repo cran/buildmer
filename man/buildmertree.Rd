@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildmertree}
 \alias{buildmertree}
-\title{Use \code{buildmer} to perform stepwise elimination for \code{lmertree} and \code{glmertree} models from package \code{glmertree}}
+\title{Uses \code{buildmer} to perform stepwise elimination for \code{lmertree} and \code{glmertree} models from package \code{glmertree}}
 \usage{
 buildmertree(
   formula,
@@ -14,14 +14,14 @@ buildmertree(
 \arguments{
 \item{formula}{Either a \code{glmertree} formula, looking like \code{dep ~ left | middle | right} where the \code{middle} part is an \code{lme4}-style random-effects specification, or an ordinary formula (or buildmer term list thereof) specifying only the dependent variable and the fixed and random effects for the regression part. In the latter case, the additional argument \code{partitioning} must be specified as a one-sided formula containing the partitioning part of the model.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to perform stepwise elimination for \code{lmertree} and \code{glmertree} models from package \code{glmertree}
+Uses \code{buildmer} to perform stepwise elimination for \code{lmertree} and \code{glmertree} models from package \code{glmertree}
 }
 \details{
 Note that the likelihood-ratio test is not available for \code{glmertree} models, as it cannot be assured that the models being compared are nested. The default is thus to use AIC.
@@ -40,5 +40,5 @@ if (requireNamespace('glmertree')) {
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

@@ -2,19 +2,19 @@
 % Please edit documentation in R/buildmer.r
 \name{buildmer.nb}
 \alias{buildmer.nb}
-\title{Use \code{buildmer} to fit negative-binomial models using \code{glm.nb} and \code{glmer.nb}}
+\title{Uses \code{buildmer} to fit negative-binomial models using \code{glm.nb} and \code{glmer.nb}}
 \usage{
 buildmer.nb(formula, data = NULL, buildmerControl = buildmerControl())
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit negative-binomial models using \code{glm.nb} and \code{glmer.nb}
+Uses \code{buildmer} to fit negative-binomial models using \code{glm.nb} and \code{glmer.nb}
 }
 \examples{
 library(buildmer)
@@ -23,5 +23,5 @@ model <- buildmer.nb(Days ~ Sex*Age*Eth*Lrn,MASS::quine)
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

@@ -1,5 +1,5 @@
-callfixup <- function (p,substitute.fun,call,patch.family) {
-	for (x in intersect(c(NSENAMES,'control'),names(p$args))) {
+callfixup <- function(p,substitute.fun,call,patch.family) {
+	for (x in intersect(NSENAMES,names(p$args))) {
 		call[x] <- p$call$args[x]
 	}
 	call[[1]] <- substitute.fun
@@ -9,7 +9,7 @@ callfixup <- function (p,substitute.fun,call,patch.family) {
 	}
 	call
 }
-run <- function (fun,args,quiet) {
+run <- function(fun,args,quiet) {
 	if (quiet) {
 		suppressMessages(suppressWarnings(try(do.call(fun,args),silent=TRUE)))
 	} else {
@@ -17,7 +17,7 @@ run <- function (fun,args,quiet) {
 	}
 }
 
-patch.GLMMadaptive <- function (p,fun,args) {
+patch.GLMMadaptive <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)
@@ -26,7 +26,7 @@ patch.GLMMadaptive <- function (p,fun,args) {
 	model
 }
 
-patch.gamm <- function (p,fun,args) {
+patch.gamm <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)
@@ -35,7 +35,7 @@ patch.gamm <- function (p,fun,args) {
 	model
 }
 
-patch.gamm4 <- function (p,fun,args) {
+patch.gamm4 <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)
@@ -44,7 +44,7 @@ patch.gamm4 <- function (p,fun,args) {
 	model
 }
 
-patch.lm <- function (p,fun,args) {
+patch.lm <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)
@@ -53,7 +53,7 @@ patch.lm <- function (p,fun,args) {
 	model
 }
 
-patch.lmer <- function (p,fun,args) {
+patch.lmer <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)
@@ -62,7 +62,7 @@ patch.lmer <- function (p,fun,args) {
 	model
 }
 
-patch.mertree <- function (p,fun,args) {
+patch.mertree <- function(p,fun,args) {
 	model <- run(fun,args,p$quiet)
 	if (inherits(model,'try-error')) {
 		return(model)

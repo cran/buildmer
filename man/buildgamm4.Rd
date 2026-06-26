@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildgamm4}
 \alias{buildgamm4}
-\title{Use \code{buildmer} to fit generalized additive models using package \code{gamm4}}
+\title{Uses \code{buildmer} to fit generalized additive models using package \code{gamm4}}
 \usage{
 buildgamm4(
   formula,
@@ -12,16 +12,16 @@ buildgamm4(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit generalized additive models using package \code{gamm4}
+Uses \code{buildmer} to fit generalized additive models using package \code{gamm4}
 }
 \details{
 The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
@@ -40,5 +40,5 @@ if (requireNamespace('gamm4')) model <- buildgamm4(f1 ~ s(timepoint,by=following
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

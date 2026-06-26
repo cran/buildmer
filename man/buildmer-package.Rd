@@ -5,16 +5,21 @@
 \alias{buildmer-package}
 \title{Construct and fit as complete a model as possible and perform stepwise elimination}
 \description{
-The \code{buildmer} package consists of a number of functions, each designed to fit specific types of models (e.g. \code{\link{buildmer}} for mixed-effects regression, \code{\link{buildgam}} for generalized additive models, \code{\link{buildmertree}} for mixed-effects-regression trees, and so forth). The common parameters shared by all (or most of) these functions are documented here. If you are looking for a more general description of what the various \code{build...} functions do, see under `Details'. For function-specific details, see the documentation for each individual function.
+The \code{buildmer} package consists of a number of functions, each designed to fit specific types of models (e.g. \code{\link{buildmer}} for mixed-effects regression, \code{\link{buildgam}} for generalized additive models, \code{\link{buildmertree}} for mixed-effects-regression trees, and so forth). The common parameters shared by all (or most of) these functions are documented in \code{\link{buildmerControl}}. For function-specific details, see the documentation for each individual function.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item Report bugs at \url{https://gitlab.com/cvoeten/buildmer/-/issues}
+  \item Report bugs at \url{https://gitlab.com/cvoeten/buildmer/-/work_items/issues}
 }
 
 }
 \author{
 \strong{Maintainer}: Cesko C. Voeten \email{cvoeten@gmail.com} (\href{https://orcid.org/0000-0003-4687-9973}{ORCID})
+
+Authors:
+\itemize{
+  \item Cesko C. Voeten \email{cvoeten@gmail.com} (\href{https://orcid.org/0000-0003-4687-9973}{ORCID})
+}
 
 }

@@ -1,11 +1,11 @@
-get2LL <- function (m) as.numeric(-2*stats::logLik(m))
-getdevexp <- function (m) {
+get2LL <- function(m) as.numeric(-2*stats::logLik(m))
+getdevexp <- function(m) {
 	if (all(c('deviance','null.deviance') %in% names(m))) return(1-m$deviance/m$null.deviance)
 	ff <- fitted(m)
 	rr <- stats::resid(m)
 	stats::cor(ff,ff+rr)^2
 }
-safeNdf <- function (m) {
+safeNdf <- function(m) {
 	if (inherits(m,c('nnet','multinom'))) {
 		# no nobs method
 		attr(logLik(m),'df')
@@ -14,7 +14,7 @@ safeNdf <- function (m) {
 		nobs(m) - safeRdf(m)
 	}
 }
-safeRdf <- function (m) {
+safeRdf <- function(m) {
 	if (inherits(m,c('nnet','multinom'))) {
 		# no df.residual method nor nobs method
 		nrow(fitted(m)) - attr(logLik(m),'df')
@@ -28,9 +28,9 @@ safeRdf <- function (m) {
 	}
 }
 
-crit.AIC <- function (p,ref,alt) if (is.null(ref)) stats::AIC(alt) else stats::AIC(alt) - stats::AIC(ref)
-crit.BIC <- function (p,ref,alt) if (is.null(ref)) stats::BIC(alt) else stats::BIC(alt) - stats::BIC(ref)
-crit.F <- function (p,ref,alt) {
+crit.AIC <- function(p,ref,alt) if (is.null(ref)) stats::AIC(alt) else stats::AIC(alt) - stats::AIC(ref)
+crit.BIC <- function(p,ref,alt) if (is.null(ref)) stats::BIC(alt) else stats::BIC(alt) - stats::BIC(ref)
+crit.F <- function(p,ref,alt) {
 	r2_alt  <- getdevexp(alt)
 	ddf_alt <- safeRdf(alt)
 	ndf_alt <- safeNdf(alt)
@@ -52,22 +52,13 @@ crit.F <- function (p,ref,alt) {
 	if (Fval <= 0 || ndf <= 0) {
 		return(log1p(abs(Fval))) #gives the order step some idea of which model is the least unhelpful
 	}
-	scale.est <- if (is.na(p$scale.est)) {
-		if ('scale.estimated' %in% names(alt)) {
-			alt$scale.estimated
-		} else {
-			TRUE #not special-cased, not binomial or poisson --> true by default
-		}
-	} else {
-		p$scale.est
-	}
-	if (scale.est) {
+	if (p$scale.est) {
 		stats::pf(Fval,ndf,ddf,lower.tail=FALSE,log.p=TRUE)
 	} else {
 		stats::pchisq(ndf*Fval,ndf,lower.tail=FALSE,log.p=TRUE)
 	}
 }
-crit.LRT <- function (p,ref,alt) {
+crit.LRT <- function(p,ref,alt) {
 	if (is.null(ref)) {
 		chLL <- get2LL(alt)
 		chdf <- safeNdf(alt)
@@ -97,14 +88,14 @@ crit.LRT <- function (p,ref,alt) {
 	}
 	stats::pchisq(chLL,chdf,lower.tail=FALSE,log.p=TRUE)
 }
-crit.2LL <- function (p,ref,alt) if (is.null(ref)) get2LL(alt) else get2LL(alt) - get2LL(ref)
+crit.2LL <- function(p,ref,alt) if (is.null(ref)) get2LL(alt) else get2LL(alt) - get2LL(ref)
 crit.LL <- crit.2LL
-crit.devexp <- function (p,ref,alt) if (is.null(ref)) getdevexp(alt) else getdevexp(alt) - getdevexp(ref)
+crit.devexp <- function(p,ref,alt) if (is.null(ref)) getdevexp(alt) else getdevexp(alt) - getdevexp(ref)
 crit.deviance <- crit.devexp
 
-elim.AIC <- function (diff) diff > -.001
+elim.AIC <- function(diff) diff > -.001
 elim.BIC <- elim.AIC
-elim.F   <- function (logp) exp(logp) >= .05
+elim.F   <- function(logp) exp(logp) >= .05
 elim.LRT <- elim.F
 elim.2LL <- elim.AIC
 elim.LL  <- elim.AIC

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{add.terms}
 \alias{add.terms}
-\title{Add terms to a formula}
+\title{Adds terms to a formula}
 \usage{
 add.terms(formula, add)
 }
@@ -15,7 +15,7 @@ add.terms(formula, add)
 The updated formula.
 }
 \description{
-Add terms to a formula
+Adds terms to a formula
 }
 \examples{
 library(buildmer)

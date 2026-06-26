@@ -1,4 +1,4 @@
-#' Add terms to a formula
+#' Adds terms to a formula
 #' @param formula The formula to add terms to.
 #' @param add A vector of terms to add. To add terms nested in random-effect groups, use `(term|group)' syntax if you want to add an independent random effect (e.g. `(olderterm|group) + (term|group)'), or use `term|group' syntax if you want to add a dependent random effect to a pre-existing term group (if no such group exists, it will be created at the end of the formula).
 #' @return The updated formula.
@@ -9,7 +9,7 @@
 #' add.terms(form,'(0+Days|Subject)')
 #' add.terms(form,c('many','more|terms','to|terms','(be|added)','to|test'))
 #' @export
-add.terms <- function (formula,add) {
+add.terms <- function(formula,add) {
 	dep       <- if (length(formula) < 3) '' else as.character(formula[2])
 	terms     <- terms(formula,keep.order=TRUE)
 	intercept <- attr(terms,'intercept')
@@ -25,7 +25,7 @@ add.terms <- function (formula,add) {
 	fixed.terms <- Filter(Negate(is.random.term),terms)
 	random.terms <- Filter(is.random.term,terms)
 	if (length(random.terms)) {
-		random.terms <- sapply(random.terms,function (x) if (mkTerm(x)[[1]] != '(') paste0('(',x,')') else x)
+		random.terms <- sapply(random.terms,function(x) if (mkTerm(x)[[1]] != '(') paste0('(',x,')') else x)
 	}
 
 	for (term in add) {
@@ -39,9 +39,9 @@ add.terms <- function (formula,add) {
 			bar.grouping <- as.character(bar[3])
 			bar.terms <- bar[[2]]
 			# Find suitable terms for 'intruding', i.e.: can we add the term requested to a pre-existing term group?
-			suitable <- if (length(random.terms)) which(sapply(random.terms,function (term) mkTerm(term)[[2]][[3]] == bar.grouping)) else NULL
+			suitable <- if (length(random.terms)) which(sapply(random.terms,function(term) mkTerm(term)[[2]][[3]] == bar.grouping)) else NULL
 			if (length(suitable)) {
-				random.terms[[suitable[1]]] <- sapply(random.terms[[suitable[1]]],function (x) {
+				random.terms[[suitable[1]]] <- sapply(random.terms[[suitable[1]]],function(x) {
 					bar <- mkTerm(x)[[2]]
 					grouping <- as.character(bar[3])
 					terms <- as.character(bar[2])
@@ -67,7 +67,7 @@ add.terms <- function (formula,add) {
 	stats::as.formula(paste0(dep,'~',paste0(terms,collapse='+')),environment(formula))
 }
 
-#' Convert a buildmer term list into a proper model formula
+#' Converts a buildmer term list into a proper model formula
 #' @param dep The dependent variable.
 #' @param terms The term list.
 #' @param env The environment of the formula to return.
@@ -80,7 +80,7 @@ add.terms <- function (formula,add) {
 #' 
 #' # check that the two formulas give the same results
 #' library(lme4)
-#' check <- function (f) resid(lmer(f,sleepstudy))
+#' check <- function(f) resid(lmer(f,sleepstudy))
 #' all.equal(check(form1),check(form2))
 #' 
 #' # can also do double bars now
@@ -89,7 +89,7 @@ add.terms <- function (formula,add) {
 #' form2 <- build.formula(dep='Reaction',terms)
 #' all.equal(check(form1),check(form2))
 #' @export
-build.formula <- function (dep,terms,env=parent.frame()) {
+build.formula <- function(dep,terms,env=parent.frame()) {
 	fixed.intercept <- is.na(terms$grouping) & terms$term == '1'
 	if (any(fixed.intercept)) {
 		form <- stats::as.formula(paste(dep,'~1'))
@@ -116,7 +116,7 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 	form
 }
 
-#' Test a model for convergence
+#' Tests a model for convergence
 #' @param model The model object to test.
 #' @param singular.ok A logical indicating whether singular fits are accepted as `converged' or not. Relevant only for lme4 models.
 #' @param grad.tol The tolerance to use for checking the gradient. This is currently only used by mgcv, glmmTMB, and clm(m) models.
@@ -131,16 +131,18 @@ build.formula <- function (dep,terms,env=parent.frame()) {
 #'             optimizer='bobyqa',optCtrl=list(maxfun=1)))
 #' sapply(list(good1,good2,bad),converged)
 #' @export
-converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
-	setattr <- function (x,msg,err=NULL) {
+converged <- function(model,singular.ok=FALSE,grad.tol=if (inherits(model,'bam')) 10 else .1,hess.tol=if (inherits(model,'bam')) 10 else .01) {
+	grad.tol <- eval(eval(grad.tol)) #the second eval evals `if`,
+	hess.tol <- eval(eval(hess.tol)) #the first eval evals `quote` from buildmerControl
+	setattr <- function(x,msg,err=NULL) {
 		if (!is.null(err)) msg <- paste0(msg,' (',err,')')
 		attr(x,'reason') <- msg
 		x
 	}
-	failure <- function (msg,err=NULL) setattr(FALSE,msg,err)
-	success <- function (msg,err=NULL) setattr(TRUE,msg,err)
+	failure <- function(msg,err=NULL) setattr(FALSE,msg,err)
+	success <- function(msg,err=NULL) setattr(TRUE,msg,err)
 	#eigen sometimes returns complex vectors; https://lists.r-forge.r-project.org/pipermail/adegenet-forum/2013-November/000719.html
-	eigval  <- function (...) suppressWarnings(as.numeric(eigen(...)$values))
+	eigval  <- function(...) suppressWarnings(as.numeric(eigen(...)$values))
 	if (inherits(model,'try-error')) return(failure(model))
 	if (inherits(model,'buildmer')) return(converged(model@model))
 	if (inherits(model,'gam')) {
@@ -171,8 +173,11 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 	}
 	if (inherits(model,'merMod')) {
 		if ((err <- model@optinfo$conv$opt) != 0) return(failure('Optimizer reports not having finished',err))
+		if (lme4::isSingular(model) && !singular.ok) {
+			return(failure('Singular fit'))
+		}
 		if (length(model@optinfo$conv$lme4)) {
-			if (is.null(model@optinfo$conv$lme4$code) && !singular.ok) return(failure('Singular fit'))
+			if (is.null(model@optinfo$conv$lme4$code) && !singular.ok) return(failure('Singular fit (due to absence of optinfo convergence code)'))
 			if (any((err <- model@optinfo$conv$lme4$code) != 0)) return(failure('lme4 reports not having converged',err))
 		}
 		if (is.null(model@optinfo$derivs)) return(success('No derivative information available -- succeeding by default (dangerous!)'))
@@ -200,7 +205,7 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 		return(success('All buildmer checks passed (glmmTMB)'))
 	}
 	if (inherits(model,'nnet'))   return(if (model$convergence == 0) success('All buildmer checks passed (nnet)'  ) else failure('nnet reports nonconvergence',model$convergence))
-	if (inherits(model,'MixMod')) return(if (model$converged)        success('All buildmer checks passed (MixMod)') else failure('GLMMadaptive reports nonconvergence'))
+	if (inherits(model,'MixMod')) return(if (model$converged) success('All buildmer checks passed (MixMod)') else failure('GLMMadaptive reports nonconvergence'))
 	if (inherits(model,'clm') || inherits(model,'clmm')) {
 		if (inherits(model,'clm')) {
 			if (model$convergence$code != 0) return(failure('clm reports nonconvergence',model$messages))
@@ -229,10 +234,52 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 	success('No checks needed or known for this model type',class(model))
 }
 
-#' Convert lme4 random-effect terms to mgcv 're' smooths
+#' Sets up deviation contrasts
+#' 
+#' This function is an alias to \code{\link{contr.deviation}} intended to allow the \code{C} command to work for deviation-coding the same way as it does for other, base-R, contrasts.
+#' 
+#' @param n See \code{\link{contr.sum}}.
+#' @param contrasts See \code{\link{contr.sum}}.
+#' @param sparse See \code{\link{contr.sum}}.
+#' @importFrom stats contr.sum
+#' @return A matrix of deviation-coded contrasts.
+#' @seealso \code{\link{contr.deviation}}, \code{\link{contr.sum}}
+#' @examples
+#' iris$Species <- C(iris$Species,deviation)
+#' @export
+deviation <- function(n,contrasts=TRUE,sparse=FALSE) {
+	contr.deviation(n,contrasts,sparse)
+}
+
+#' Sets up deviation contrasts
+#' 
+#' Deviation-coding is a contrast-coding scheme that compares each level to the average of the other levels. It is often confused with sum-coding, which compares each level to the average of \emph{all} levels. In the binary case, deviation coding works out to \( (+0.5,-0.5) \); in the ternary case and beyond, the coding is a little bit more involved.
+#' 
+#' \code{contr.deviation} starts by calling \code{\link{contr.sum}} and hence accepts the same arguments as it does.
+#' @param n See \code{\link{contr.sum}}.
+#' @param contrasts See \code{\link{contr.sum}}.
+#' @param sparse See \code{\link{contr.sum}}.
+#' @importFrom stats contr.sum
+#' @return A matrix of deviation-coded contrasts.
+#' @seealso \code{\link{contr.sum}}
+#' @examples
+#' iris$Species <- contr.deviation(iris$Species)
+#' @export
+contr.deviation <- function(n,contrasts=TRUE,sparse=FALSE) {
+	c  <- contr.sum(n,contrasts,sparse)
+	nr <- nrow(c)
+	c[c == 0] <- -1
+	c[c == 1] <- nr - 1
+	c / nr
+}
+
+#' Converts lme4 random-effect terms to mgcv 're' smooths
 #' @param formula The lme4 formula.
 #' @param data The data.
 #' @param drop Logical indicating whether constant, non-intercept columns should be dropped. Default \code{TRUE}. A warning is issued if a column needed to be dropped. Note that repeated intercept columns are silently merged without a warning.
+#' @return A list containing a new formula (has a dependent variable but loses track of what terms belong together in a single block), a buildmer term list (lacks the dependent variable but represents what terms belong together), and a new data set.
+#' @details
+#' To ensure that the various buildmer functions (e.g. buildgam, buildbam) correctly apply marginality constraints between parametric terms and random-effect terms, the parametric terms are renamed using the same name-mangling scheme that is automatically applied to the random effects. To ensure that the mangled names will be grouped together, instead of passing the returned \code{formula}, use the returned \code{termlist} with a \code{dep} argument. See the description of the \code{dep} argument in \code{\link{buildmerControl}}.
 #' @examples
 #' library(buildmer)
 #' re <- re2mgcv(temp ~ angle + (1|replicate) + (1|recipe),lme4::cake)
@@ -241,48 +288,31 @@ converged <- function (model,singular.ok=FALSE,grad.tol=.1,hess.tol=.01) {
 #' \dontshow{if (FALSE)}
 #' re <- re2mgcv(log(Reaction) ~ Days + (Days|Subject),lme4::sleepstudy)
 #' @export
-re2mgcv <- function (formula,data,drop=TRUE) {
-	e <- environment(formula)
-	dep <- as.character(formula[[2]])
-	data <- data[!is.na(data[[dep]]),]
-	formula <- tabulate.formula(formula)
-	fixed <- is.na(formula$grouping)
-	random <- formula[!fixed,]
-	formula <- formula[fixed,]
-	org.names <- names(data)
-	for (g in unique(random$grouping)) {
-		if (!g %in% names(data)) {
-			stop('No factor named "',g,'" in your data')
-		}
-		data[[g]] <- factor(data[[g]])
-		tab <- random[random$grouping == g,]
-		tab$index <- tab$grouping <- NA
-		f <- build.formula(dep,tab,e)
-		mm <- model.matrix(f,data)
-		nms <- gsub('[():]','_',colnames(mm))
-		for (i in seq_along(nms)) {
-			mi <- mm[,i]
-			if (all(mi == 1)) {
-				term <- paste0('s(',g,',bs="re")')
-			} else if (all(mi == mi[1]) && drop) {
-				warning('Dropping constant column ',colnames(mm)[i],'|',g,', which is all ',mi[1])
-				next
-			} else {
-				nm <- paste0(g,'_',nms[i])
-				if (nm %in% org.names) {
-					stop('Name clash: please remove/rename ',nm,' from your data')
-				}
-				data[[nm]] <- mi
-				term <- paste0('s(',g,',',nm,',bs="re")')
-			}
-			formula <- rbind(formula,data.frame(index=NA,grouping=NA,term=term,code=term,block=term),stringsAsFactors=FALSE)
-		}			
-	}
-	formula <- build.formula(dep,formula,e)
-	list(formula=formula,data=data)
+re2mgcv <- function(formula,data,drop=TRUE) {
+	re2mgcv.internal(formula,data,drop,FALSE)
 }
 
-#' Remove terms from a formula
+#' Converts lme4 random-effect terms to uncorrelated lme4 random-effect terms, including factor random slopes
+#' 
+#' lme4 and similar packages (e.g. glmmTMB) have an issue where correlations between \emph{factor} random slopes are not dropped, even if using the double-bar syntax or \code{\link{diag}} to diagonalize the random-effects formula. \code{re2uncorr} works around this issue by explicitly converting factor random slopes to numerics, which do not suffer from this problem.
+#' @param formula The lme4 formula.
+#' @param data The data.
+#' @param drop Logical indicating whether constant, non-intercept columns should be dropped. Default \code{TRUE}. A warning is issued if a column needed to be dropped. Note that repeated intercept columns are silently merged without a warning.
+#' @return A list containing a new formula (has a dependent variable but loses track of what terms belong together in a single block), a buildmer term list (lacks the dependent variable but represents what terms belong together), and a new data set.
+#' @details
+#' To ensure that the various buildmer functions (e.g. buildmer, buildglmmTMB) correctly apply marginality constraints between fixed effects and random-effect terms, the fixed effects are renamed using the same name-mangling scheme that is automatically applied to the random effects. To ensure that the mangled names will be grouped together, instead of passing the returned \code{formula}, use the returned \code{termlist} with a \code{dep} argument. See the description of the \code{dep} argument in \code{\link{buildmerControl}}.
+#' @examples
+#' library(buildmer)
+#' re <- re2uncorr(f1 ~ vowel*timepoint*following +
+#' 	(vowel*timepoint*following|participant) + (timepoint|word),vowels)
+#' \dontshow{if (FALSE)}
+#' model <- buildmer(re$formula,re$data)
+#' @export
+re2uncorr <- function(formula,data,drop=TRUE) {
+	re2mgcv.internal(formula,data,drop,TRUE)
+}
+
+#' Removes terms from a formula
 #' @param formula The formula.
 #' @param remove A vector of terms to remove. To remove terms nested inside random-effect groups, use `(term|group)' syntax. Note that marginality is respected, i.e. no effects will be removed if they participate in a higher-order interaction, and no fixed effects will be removed if a random slope is included over that fixed effect.
 #' @param check A logical indicating whether effects should be checked for marginality. If \code{TRUE} (default), effects will not be removed if doing so would violate marginality. Setting \code{check} to \code{FALSE} will remove terms unconditionally.
@@ -297,8 +327,8 @@ re2mgcv <- function (formula,data,drop=TRUE) {
 #' # but it works with check=FALSE
 #' remove.terms(Reaction ~ Days + (Days|Subject),'(1|Subject)',check=FALSE)
 #' @export
-remove.terms <- function (formula,remove,check=TRUE) {
-	marginality.ok <- function (remove,have) {
+remove.terms <- function(formula,remove,check=TRUE) {
+	marginality.ok <- function(remove,have) {
 		forbidden <- if (!all(have == '1')) '1' else NULL
 		for (x in have) {
 			x.star <- if (has.smooth.terms(stats::as.formula(paste0('~',x)))) paste(unpack.smooth.terms(x),collapse='*') else gsub(':','*',x) #replace any interaction by the star operator, which will cause as.formula to pull in all lower-order terms necessary without any more work from us!
@@ -307,7 +337,7 @@ remove.terms <- function (formula,remove,check=TRUE) {
 		}
 		!remove %in% forbidden
 	}
-	unwrap.terms <- function (terms,inner=FALSE,intercept=FALSE) {
+	unwrap.terms <- function(terms,inner=FALSE,intercept=FALSE) {
 		form <- stats::as.formula(paste0('~',terms))
 		terms <- terms(form,keep.order=TRUE)
 		if (intercept) intercept <- attr(terms,'intercept')
@@ -360,10 +390,10 @@ remove.terms <- function (formula,remove,check=TRUE) {
 	}
 
 	# Perform actual removal
-	terms <- lapply(terms,function (term) {
+	terms <- lapply(terms,function(term) {
 		if (is.random.term(term)) {
 			terms <- decompose.random.terms(term)
-			terms <- lapply(1:length(terms),function (i) {
+			terms <- lapply(1:length(terms),function(i) {
 				g <- names(terms)[i]
 				terms <- terms[[i]]
 				terms <- terms[!terms %in% remove.random[[g]]]
@@ -391,10 +421,10 @@ remove.terms <- function (formula,remove,check=TRUE) {
 	stats::as.formula(if (intercept) '~1' else '~0',environment(formula))
 }
 
-#' Parse a formula into a buildmer terms list
+#' Parses a formula into a buildmer term list
 #' @param formula A formula.
 #' @param group A character vector of regular expressions. Terms matching the same regular expression are assigned the same block, and will be evaluated together in buildmer functions.
-#' @return A buildmer terms list, which is just a normal data frame.
+#' @return A buildmer term list, which is just a normal data frame.
 #' @examples
 #' form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following +
 #'              ((vowel1+vowel2+vowel3+vowel4)*timepoint*following|participant) + (timepoint|word))
@@ -402,8 +432,8 @@ remove.terms <- function (formula,remove,check=TRUE) {
 #' tabulate.formula(form,group='vowel[1-4]')
 #' @seealso buildmer-package
 #' @export
-tabulate.formula <- function (formula,group=NULL) {
-	mkGroups <- function (t) {
+tabulate.formula <- function(formula,group=NULL) {
+	mkGroups <- function(t) {
 		for (x in group) {
 			t <- gsub(x,x,t,perl=TRUE)
 		}
@@ -432,11 +462,11 @@ tabulate.formula <- function (formula,group=NULL) {
 	random.terms <- Filter(is.random.term,terms)
 	random.terms <- decompose.random.terms(random.terms)
 
-	terms <- lapply(1:length(terms),function (i) {
+	terms <- lapply(1:length(terms),function(i) {
 		term <- terms[[i]]
 		if (is.random.term(term)) {
 			terms <- decompose.random.terms(term)
-			terms <- lapply(1:length(terms),function (j) {
+			terms <- lapply(1:length(terms),function(j) {
 				g <- names(terms)[j]
 				terms <- terms[[j]]
 				if (!length(terms)) {
@@ -460,18 +490,17 @@ tabulate.formula <- function (formula,group=NULL) {
 	tab
 }
 
-#' Generate an LRT elimination function with custom alpha level
+#' Generates an LRT elimination function with custom alpha level
 #' 
-#' The \code{elim} argument in \code{buildmerControl} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
-#' 
+#' The \code{elim} argument in \code{\link{buildmerControl}} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
 #' @param alpha The alpha level for the likelihood-ratio test.
 #' @seealso \code{\link{buildmerControl}}
 #' @export
-LRTalpha <- function (alpha) {
+LRTalpha <- function(alpha) {
 	if (alpha <= 0 || alpha >= 1) {
 		stop("'alpha' should be in (0,1)")
 	}
-	ret <- function (logp) exp(logp) >= alpha
+	ret <- function(logp) exp(logp) >= alpha
 	attr(ret,'elim.name') <- 'LRT'
 	ret
 }

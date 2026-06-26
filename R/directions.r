@@ -1,5 +1,5 @@
-backward <- function (p) {
-	fit.references.parallel <- function (p) {
+backward <- function(p) {
+	fit.references.parallel <- function(p) {
 		progress(p,'Fitting ML and REML reference models')
 		plist <- list(within(p, reml <- TRUE),within(p, reml <- FALSE))
 		repeat {
@@ -26,8 +26,8 @@ backward <- function (p) {
 	}
 
 	iter <- 0
-	check.random <- function (fun,tab) {
-		fun(sapply(unique(tab$block),function (b) {
+	check.random <- function(fun,tab) {
+		fun(sapply(unique(tab$block),function(b) {
 			i <- which(tab$block == b)
 			fun(!is.na(tab[i,'grouping']))
 		}))
@@ -71,7 +71,7 @@ backward <- function (p) {
 			return(p)
 		}
 		progress(p,'Testing terms')
-		results <- p$parply(unique(p$tab$block),function (b) {
+		results <- p$parply(unique(p$tab$block),function(b) {
 			if (is.na(b)) {
 				# cannot remove term because of 'include'
 				return(list(val=rep(NA,sum(is.na(p$tab$block)))))
@@ -126,8 +126,7 @@ backward <- function (p) {
 	}
 }
 
-can.remove <- function (tab,i) {
-	unravel2 <- function (x) unravel(stats::as.formula(paste0('~',x))[[2]])
+can.remove <- function(tab,i) {
 	t <- tab[i,'term']
 	g <- tab[i,'grouping']
 	fx <- which(is.na(tab$g))
@@ -148,15 +147,15 @@ can.remove <- function (tab,i) {
 		scope <- if (is.na(x)) fx else which(tab$grouping == x)
 		scope <- scope[!scope %in% i]
 		for (t in tab[i,'term']) {
-			t <- unravel2(t)
-			if (any(sapply(tab[scope,'term'],function (x) all(t %in% unravel2(x))))) return(FALSE)
+			t <- unravel(mkTerm(t))
+			if (any(sapply(tab[scope,'term'],function(x) all(t %in% unravel(mkTerm(x)))))) return(FALSE)
 		}
 	}
 
 	TRUE
 }
 
-forward <- function (p) {
+forward <- function(p) {
 	if (p$ordered != p$crit.name) {
 		p <- order(p)
 	} else if (p$ordered == 'custom') {
@@ -174,7 +173,7 @@ forward <- function (p) {
 	# This happens if they hade a smallest crit in the order step, but would still be subject to elimination by the elimination function
 	keep <- which(!remove)
 	remove[1:length(keep)] <- FALSE
-	remove.ok <- sapply(1:nrow(p$tab),function (i) {
+	remove.ok <- sapply(1:nrow(p$tab),function(i) {
 		if (is.na(p$tab[i,]$block)) return(FALSE)
 		if (!can.remove(p$tab,i)) return(FALSE)
 		TRUE
@@ -188,13 +187,13 @@ forward <- function (p) {
 	p
 }
 
-order <- function (p) {
-	reorder <- function (p,tab) {
+order <- function(p) {
+	reorder <- function(p,tab) {
 		# Test for marginality
-		can.eval <- function (tab) {
-			my.ddply <- function (data,split,fun) {
+		can.eval <- function(tab) {
+			my.ddply <- function(data,split,fun) {
 				vec <- data[[split]]
-				res <- lapply(unique(vec),function (x) {
+				res <- lapply(unique(vec),function(x) {
 					take <- if (is.na(x)) is.na(vec) else !is.na(vec) & vec == x
 					fun(data[take,])
 				})
@@ -206,7 +205,7 @@ order <- function (p) {
 			# 1. If there are random effects, evaluate them as a group
 			mine <- is.na(tab$grouping)
 			my <- tab[mine,]
-			tab[!mine,] <- my.ddply(tab[!mine,],'grouping',function (my) {
+			tab[!mine,] <- my.ddply(tab[!mine,],'grouping',function(my) {
 				g <- my$grouping
 				my$grouping <- NA
 				my <- can.eval(my)
@@ -224,11 +223,11 @@ order <- function (p) {
 				# 3. Evaluate marginality. We cannot take the terms already in the formula into account, because that will break things like nesting.
 				# Thus, we have to define marginality as ok if there is no lower-order term whose components are a proper subset of the current term.
 				if (length(my[my$ok,'term']) > 1) {
-					all.components <- lapply(my[my$ok,'term'],function (x) {
+					all.components <- lapply(my[my$ok,'term'],function(x) {
 						x <- stats::as.formula(paste0('~',x))[[2]]
 						if (is.smooth.term(x)) unpack.smooth.terms(x) else unravel(x)
 					})
-					check <- function (i) {
+					check <- function(i) {
 						test <- all.components[[i]]
 						for (x in all.components[-i]) { #walk all other terms' components
 							if (any(x == '1')) return(FALSE) #intercept should always come first
@@ -242,7 +241,7 @@ order <- function (p) {
 			}
 
 			# 4. If any term belonging to a single block could not be selected, disqualify the whole block
-			tab <- my.ddply(tab,'block',function (x) within(x,{ if (!all(ok)) ok <- FALSE }))
+			tab <- my.ddply(tab,'block',function(x) within(x,{ if (!all(ok)) ok <- FALSE }))
 
 			tab
 		}
@@ -272,7 +271,7 @@ order <- function (p) {
 				return(p)
 			}
 			progress(p,paste0('Currently evaluating ',p$crit.name,' for: ',paste0(ifelse(is.na(check$grouping),check$term,paste(check$term,'|',check$grouping)),collapse=', ')))
-			mods <- p$parply(unique(check$block),function (b,check,have,p) {
+			mods <- p$parply(unique(check$block),function(b,check,have,p) {
 				check <- check[check$block == b,]
 				tab <- rbind(have[,c('index','grouping','term')],check[,c('index','grouping','term')])
 				form <- build.formula(p$dep,tab,p$env)
@@ -280,10 +279,10 @@ order <- function (p) {
 				rep(mod,nrow(check))
 			},check,have,p)
 			mods <- unlist(mods,recursive=FALSE)
-			check$score <- sapply(mods,function (mod) if (converged(mod,p$singular.ok,p$grad.tol,p$hess.tol)) p$crit(p,cur,mod) else NaN)
-			ok <- Filter(function (x) !is.na(x) & !is.nan(x),check$score)
+			check$score <- sapply(mods,function(mod) if (converged(mod,p$singular.ok,p$grad.tol,p$hess.tol)) p$crit(p,cur,mod) else NaN)
+			ok <- Filter(function(x) !is.na(x) & !is.nan(x),check$score)
 			if (!length(ok)) {
-				statuses <- sapply(mods,function (mod) attr(converged(mod,p$singular.ok,p$grad.tol,p$hess.tol),'reason'))
+				statuses <- sapply(mods,function(mod) attr(converged(mod,p$singular.ok,p$grad.tol,p$hess.tol),'reason'))
 				statuses <- statuses[!is.na(statuses)]
 				progress(p,'Ending the ordering procedure due to having reached the maximal feasible model - all higher models failed to converge. The types of convergence failure are:\n',paste(unique(statuses),collapse='\n    '))
 				p$tab <- have
@@ -352,11 +351,11 @@ order <- function (p) {
 	p
 }
 
-reduce.model <- function (p,conv) {
+reduce.model <- function(p,conv) {
 	if (length(conv) == 1) {
 		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failure was: ',attr(conv,'reason'))
 	} else {
-		statuses <- sapply(conv[!unlist(conv)],function (x) attr(x,'reason'))
+		statuses <- sapply(conv[!unlist(conv)],function(x) attr(x,'reason'))
 		progress(p,'Convergence failure. Reducing terms and retrying...\nThe failures were: ',paste(unique(statuses),collapse='\n    '))
 	}
 	cands <- p$tab$block[!is.na(p$tab$block)]

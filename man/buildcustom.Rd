@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildcustom}
 \alias{buildcustom}
-\title{Use \code{buildmer} to perform stepwise elimination using a custom fitting function}
+\title{Uses \code{buildmer} to perform stepwise elimination using a custom fitting function}
 \usage{
 buildcustom(
   formula,
@@ -15,9 +15,9 @@ buildcustom(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
 \item{fit}{A function taking two arguments, of which the first is the \code{buildmer} parameter list \code{p} and the second one is a formula. The function must return a single object, which is treated as a model object fitted via the provided formula. The function must return an error (`\code{stop()}') if the model does not converge.}
 
@@ -27,16 +27,16 @@ buildcustom(
 
 \item{REML}{A logical indicating if the fitting function wishes to distinguish between fits differing in fixed effects (for which \code{p$reml} will be set to FALSE) and fits differing only in the random part (for which \code{p$reml} will be TRUE). Note that this ignores the usual semantics of buildmer's optional \code{REML} argument, because they are redundant: if you wish to force REML on or off, simply code it so in your custom fitting function.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to perform stepwise elimination using a custom fitting function
+Uses \code{buildmer} to perform stepwise elimination using a custom fitting function
 }
 \examples{
 ## Use \code{buildmer} to do stepwise linear discriminant analysis
 library(buildmer)
 migrant[,-1] <- scale(migrant[,-1])
-flipfit <- function (p,formula) {
+flipfit <- function(p,formula) {
     # The predictors must be entered as dependent variables in a MANOVA
     # (i.e. the predictors must be flipped with the dependent variable)
     Y <- model.matrix(formula,migrant)
@@ -45,11 +45,11 @@ flipfit <- function (p,formula) {
     test <- try(anova(m))
     if (inherits(test,'try-error')) test else m
 }
-crit.F <- function (p,a,b) { # use whole-model F
+crit.F <- function(p,a,b) { # use whole-model F
     pvals <- anova(b)$'Pr(>F)' # not valid for backward!
     pvals[length(pvals)-1]
 }
-crit.Wilks <- function (p,a,b) {
+crit.Wilks <- function(p,a,b) {
     if (is.null(a)) return(crit.F(p,a,b)) #not completely correct, but close as F approximates X2
     Lambda <- anova(b,test='Wilks')$Wilks[1]
     p <- length(coef(b))
@@ -70,5 +70,5 @@ model <- lda(changed ~ diglossic + age + reading + friends.be + years +
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

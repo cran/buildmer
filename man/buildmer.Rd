@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildmer}
 \alias{buildmer}
-\title{Use \code{buildmer} to fit mixed-effects models using \code{lmer}/\code{glmer} from \code{lme4}}
+\title{Uses \code{buildmer} to fit mixed-effects models using \code{lmer}/\code{glmer} from \code{lme4}}
 \usage{
 buildmer(
   formula,
@@ -12,16 +12,16 @@ buildmer(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit mixed-effects models using \code{lmer}/\code{glmer} from \code{lme4}
+Uses \code{buildmer} to fit mixed-effects models using \code{lmer}/\code{glmer} from \code{lme4}
 }
 \examples{
 library(buildmer)

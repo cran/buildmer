@@ -2,19 +2,19 @@
 % Please edit documentation in R/buildmer.r
 \name{buildlme}
 \alias{buildlme}
-\title{Use \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}}
+\title{Uses \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}}
 \usage{
 buildlme(formula, data = NULL, buildmerControl = buildmerControl())
 }
 \arguments{
-\item{formula}{A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{lme}, \code{buildlme} does not use a separate \code{random} argument!)}
+\item{formula}{A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{lme}, \code{buildlme} does not use a separate \code{random} argument!).}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}
+Uses \code{buildmer} to perform stepwise elimination of mixed-effects models fit via \code{lme} from \code{nlme}
 }
 \details{
 The fixed and random effects are to be passed as a single formula in \code{lme4} format. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
@@ -25,5 +25,5 @@ library(buildmer)
 model <- buildlme(Reaction ~ Days + (Days|Subject),data=lme4::sleepstudy)
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

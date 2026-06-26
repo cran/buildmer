@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildGLMMadaptive}
 \alias{buildGLMMadaptive}
-\title{Use \code{buildmer} to fit generalized linear mixed models using \code{mixed_model} from package \code{GLMMadaptive}}
+\title{Uses \code{buildmer} to fit generalized linear mixed models using \code{mixed_model} from package \code{GLMMadaptive}}
 \usage{
 buildGLMMadaptive(
   formula,
@@ -12,16 +12,16 @@ buildGLMMadaptive(
 )
 }
 \arguments{
-\item{formula}{A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{mixed_model}, \code{buildGLMMadaptive} does not use a separate \code{random} argument!)}
+\item{formula}{A formula specifying both fixed and random effects using \code{lme4} syntax. (Unlike \code{mixed_model}, \code{buildGLMMadaptive} does not use a separate \code{random} argument!).}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit generalized linear mixed models using \code{mixed_model} from package \code{GLMMadaptive}
+Uses \code{buildmer} to fit generalized linear mixed models using \code{mixed_model} from package \code{GLMMadaptive}
 }
 \details{
 The fixed and random effects are to be passed as a single formula in \emph{\code{lme4} format}. This is internally split up into the appropriate \code{fixed} and \code{random} parts.
@@ -43,5 +43,5 @@ model <- buildGLMMadaptive(stress ~ vowel + (vowel||participant),
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

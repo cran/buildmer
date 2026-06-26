@@ -3,6 +3,36 @@
 '*' denotes minor changes visible to the user
 '.' denotes minor fixes
 
+2.13 (2026-06-26)
+
+* re2mgcv now replaces the parametric terms (fixed effects) with their mangled
+  names, thereby preserving marginality between fixed and random effects ('do
+  not remove a fixed effect if it has a corresponding random slope present').
+* Corrected an unnecessary split between control arguments for clm and those
+  for clmm. buildclmm now just passes on any extra 'control' argument verbatim.
+* Added a new function, 're2uncorr', which leverages re2mgcv to remove
+  correlations from lme4 formulas, even if there are factor random slopes.
+* Like re2uncorr, re2mgcv now also returns the buildmer term list.
+* Updated the PQL guard to account for bam changes as of mgcv 1.9-4.
+* Improved the default convergence checking criteria for bam models.
+* 'formula' and 'data' arguments are now evaluated using force() in all
+  buildmer functions (except buildcustom). This gives better error messages if
+  there are any issues with these arguments.
+* Added a new function, 'contr.deviation', to help the user set up deviation
+  contrasts. Whereas sum contrasts compare each level of a factor to the
+  average of all levels, deviation contrasts compare each level of a factor to
+  the average of the *other* levels. An alias, 'deviation', makes it possible
+  to write code like C(.,deviation), as works for e.g. sum contrasts.
+* Corrected the handling of singular fits for glmer models as of lme4 2.0.
+  Thanks to Julian Jarosch for the report.
+. Improved sanitization of contrast labels in re2mgcv.
+. Corrected the patching of control arguments like lmerControl.
+. Corrected some outdated documentation.
+. Corrected handling of scale.est for crit.F.
+. Improved handling of rank-deficiency in re2mgcv.
+. Corrected the handling of the 'control' argument, which should not have been
+  evaluated NSEly. Thanks to Rebecca Bieber for the report.
+
 2.12 (2025-05-11)
 
 . buildmer now imports findbars from reformulas rather than from lme4. Thanks
@@ -10,7 +40,7 @@
 
 2.11 (2023-10-24)
 
-*** Revert a change introduced in v2.10 that sometimes caused comparisons
+*** Reverted a change introduced in v2.10 that sometimes caused comparisons
     between models to be based on REML where this was not correct (due to
     differences being present between the fixed-effect structures). Thanks to
     Paul Warren for the report.
@@ -21,7 +51,7 @@
 
 2.10.1 (2023-09-11)
 
-. Fix bug introduced in v2.10 involving namespacing that caused an error when
+. Fixed bug introduced in v2.10 involving namespacing that caused an error when
   trying to call buildmerControl() from other packages.
 
 2.10 (2023-09-11)

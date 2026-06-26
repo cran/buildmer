@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{tabulate.formula}
 \alias{tabulate.formula}
-\title{Parse a formula into a buildmer terms list}
+\title{Parses a formula into a buildmer term list}
 \usage{
 tabulate.formula(formula, group = NULL)
 }
@@ -12,10 +12,10 @@ tabulate.formula(formula, group = NULL)
 \item{group}{A character vector of regular expressions. Terms matching the same regular expression are assigned the same block, and will be evaluated together in buildmer functions.}
 }
 \value{
-A buildmer terms list, which is just a normal data frame.
+A buildmer term list, which is just a normal data frame.
 }
 \description{
-Parse a formula into a buildmer terms list
+Parses a formula into a buildmer term list
 }
 \examples{
 form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following +

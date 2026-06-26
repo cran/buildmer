@@ -23,7 +23,7 @@ vowels <- cbind(vowels,model.matrix(~vowel,vowels))
 form <- diag(f1 ~ (vowel1+vowel2+vowel3+vowel4)*timepoint*following + 
 	     ((vowel1+vowel2+vowel3+vowel4)*timepoint*following | participant) +
 	     (timepoint | word))
-# 3. Convert formula to buildmer terms list, grouping terms starting with 'vowel'
+# 3. Convert formula to buildmer term list, grouping terms starting with 'vowel'
 terms <- tabulate.formula(form,group='vowel[^:]')
 # 4. Directly pass the terms object to buildmer, using the 'dep' argument to specify the
 # dependent variable

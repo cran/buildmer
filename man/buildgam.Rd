@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildgam}
 \alias{buildgam}
-\title{Use \code{buildmer} to fit generalized additive models using \code{gam} from package \code{mgcv}}
+\title{Uses \code{buildmer} to fit generalized additive models using \code{gam} from package \code{mgcv}}
 \usage{
 buildgam(
   formula,
@@ -13,18 +13,18 @@ buildgam(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
 \item{quickstart}{A numeric with values from 0 to 5. If set to 1, will use \code{bam} to obtain starting values for \code{gam}'s outer iteration, potentially resulting in a much faster fit for each model. If set to 2, will disregard ML/REML and always use \code{bam}'s \code{fREML} for the quickstart fit. 3 also sets \code{discrete=TRUE}. Values between 3 and 4 fit the quickstart model to a subset of that value (e.g.\ \code{quickstart=3.1} fits the quickstart model to 10\% of the data, which is also the default if \code{quickstart=3}. Values between 4 and 5 do the same, but also set a very sloppy convergence tolerance of 0.2.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit generalized additive models using \code{gam} from package \code{mgcv}
+Uses \code{buildmer} to fit generalized additive models using \code{gam} from package \code{mgcv}
 }
 \details{
 To work around an issue in \code{gam}, you must make sure that your data do not contain a variable named 'intercept'.
@@ -33,7 +33,7 @@ To work around an issue in \code{gam}, you must make sure that your data do not 
 
 If \code{gam}'s \code{optimizer} argument is not set to use outer iteration, \code{gam} fits using PQL. In this scenario, only \code{crit='F'} and \code{crit='deviance'} (note that the latter is not a formal test) are legitimate in the generalized case.
 
-General families implemented in \code{mgcv} are supported, provided that they use normal formulas. Currently, this is only true of the \code{cox.ph} family. Because this family can only be fitted using REML, \code{buildgam} automatically sets \code{gam}'s \code{select} argument to \code{TRUE} and prevents removal of parametric terms.
+General families implemented in \code{mgcv} are not supported, as they are only defined in terms of a mean-variance relationship and hence always use a linearized (PQL) approximation of the model. They do not have a real likelihood.
 
 \code{\link{buildmerControl}}'s quickstart function may be used here. If you desire more control (e.g.\ \code{discrete=FALSE} but \code{use.chol=TRUE}), additional options can be provided as extra arguments and will be passed on to \code{bam} as they are applicable. Note that \code{quickstart} needs to be larger than 0 to trigger the quickstart path at all.
 
@@ -51,5 +51,5 @@ model <- buildgam(f1 ~ s(timepoint,by=following) + s(participant,by=following,bs
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

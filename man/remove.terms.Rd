@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{remove.terms}
 \alias{remove.terms}
-\title{Remove terms from a formula}
+\title{Removes terms from a formula}
 \usage{
 remove.terms(formula, remove, check = TRUE)
 }
@@ -14,7 +14,7 @@ remove.terms(formula, remove, check = TRUE)
 \item{check}{A logical indicating whether effects should be checked for marginality. If \code{TRUE} (default), effects will not be removed if doing so would violate marginality. Setting \code{check} to \code{FALSE} will remove terms unconditionally.}
 }
 \description{
-Remove terms from a formula
+Removes terms from a formula
 }
 \examples{
 library(buildmer)

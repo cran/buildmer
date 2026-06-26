@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{build.formula}
 \alias{build.formula}
-\title{Convert a buildmer term list into a proper model formula}
+\title{Converts a buildmer term list into a proper model formula}
 \usage{
 build.formula(dep, terms, env = parent.frame())
 }
@@ -17,7 +17,7 @@ build.formula(dep, terms, env = parent.frame())
 A formula.
 }
 \description{
-Convert a buildmer term list into a proper model formula
+Converts a buildmer term list into a proper model formula
 }
 \examples{
 library(buildmer)
@@ -27,7 +27,7 @@ form2 <- build.formula(dep='Reaction',terms)
 
 # check that the two formulas give the same results
 library(lme4)
-check <- function (f) resid(lmer(f,sleepstudy))
+check <- function(f) resid(lmer(f,sleepstudy))
 all.equal(check(form1),check(form2))
 
 # can also do double bars now

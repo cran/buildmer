@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{re2mgcv}
 \alias{re2mgcv}
-\title{Convert lme4 random-effect terms to mgcv 're' smooths}
+\title{Converts lme4 random-effect terms to mgcv 're' smooths}
 \usage{
 re2mgcv(formula, data, drop = TRUE)
 }
@@ -13,8 +13,14 @@ re2mgcv(formula, data, drop = TRUE)
 
 \item{drop}{Logical indicating whether constant, non-intercept columns should be dropped. Default \code{TRUE}. A warning is issued if a column needed to be dropped. Note that repeated intercept columns are silently merged without a warning.}
 }
+\value{
+A list containing a new formula (has a dependent variable but loses track of what terms belong together in a single block), a buildmer term list (lacks the dependent variable but represents what terms belong together), and a new data set.
+}
 \description{
-Convert lme4 random-effect terms to mgcv 're' smooths
+Converts lme4 random-effect terms to mgcv 're' smooths
+}
+\details{
+To ensure that the various buildmer functions (e.g. buildgam, buildbam) correctly apply marginality constraints between parametric terms and random-effect terms, the parametric terms are renamed using the same name-mangling scheme that is automatically applied to the random effects. To ensure that the mangled names will be grouped together, instead of passing the returned \code{formula}, use the returned \code{termlist} with a \code{dep} argument. See the description of the \code{dep} argument in \code{\link{buildmerControl}}.
 }
 \examples{
 library(buildmer)

@@ -2,19 +2,19 @@
 % Please edit documentation in R/buildmer.r
 \name{buildgls}
 \alias{buildgls}
-\title{Use \code{buildmer} to fit generalized-least-squares models using \code{gls} from \code{nlme}}
+\title{Uses \code{buildmer} to fit generalized-least-squares models using \code{gls} from \code{nlme}}
 \usage{
 buildgls(formula, data = NULL, buildmerControl = buildmerControl())
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit generalized-least-squares models using \code{gls} from \code{nlme}
+Uses \code{buildmer} to fit generalized-least-squares models using \code{gls} from \code{nlme}
 }
 \details{
 A workaround is included to prevent an error when the model matrix is of less than full rank. The summary output of such a model will look a bit strange!
@@ -27,5 +27,5 @@ model <- buildgls(f1 ~ timepoint*following,data=vowels,
 	buildmerControl=list(args=list(correlation=corAR1(form=~1|event))))
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

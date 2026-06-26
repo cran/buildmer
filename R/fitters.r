@@ -1,4 +1,4 @@
-fit.GLMMadaptive <- function (p,formula) {
+fit.GLMMadaptive <- function(p,formula) {
 	fixed <- reformulas::nobars(formula)
 	bars <- reformulas::findbars(formula)
 	if (is.null(bars)) {
@@ -6,14 +6,14 @@ fit.GLMMadaptive <- function (p,formula) {
 	}
 	if (length(bars) > 1) {
 		# could be a ZCP term
-		groups <- sapply(bars,function (x) as.character(list(x[[3]])))
+		groups <- sapply(bars,function(x) as.character(list(x[[3]])))
 		if ((lug <- length(unique(groups))) > 1) {
 			stop(paste0('mixed_model can only handle a single random-effect grouping factor, yet you seem to have specified ',lug))
 		}
-		terms <- sapply(bars,function (x) as.character(list(x[[2]])))
+		terms <- sapply(bars,function(x) as.character(list(x[[2]])))
 		# findbars always adds in '0 +'
 		if ('1' %in% terms) {
-			terms <- sapply(terms,function (x) {
+			terms <- sapply(terms,function(x) {
 				tab <- tabulate.formula(mkForm(x))
 				if (!nrow(tab)) {
 					return(x)
@@ -29,7 +29,7 @@ fit.GLMMadaptive <- function (p,formula) {
 	patch.GLMMadaptive(p,GLMMadaptive::mixed_model,c(list(fixed=fixed,random=random,data=p$data,family=p$family),p$args))
 }
 
-fit.bam <- function (p,formula) {
+fit.bam <- function(p,formula) {
 	re <- re2mgcv(formula,p$data)
 	formula <- re$formula
 	p$data <- re$data
@@ -49,7 +49,7 @@ fit.bam <- function (p,formula) {
 	patch.lm(p,mgcv::bam,c(list(formula=formula,family=p$family,data=p$data,method=method),p$args))
 }
 
-fit.buildmer <- function (p,formula) {
+fit.buildmer <- function(p,formula) {
 	reml <- p$reml && p$is.gaussian
 	if (is.null(reformulas::findbars(formula))) {
 		p$args$control <- NULL
@@ -78,28 +78,12 @@ fit.buildmer <- function (p,formula) {
 	}
 }
 
-fit.clmm <- function (p,formula) {
-	clm.control <- p$args$clm.control
-	clmm.control <- p$args$clmm.control
-	p$args$clm.control <- p$args$clmm.control <- NULL
-	if (is.null(reformulas::findbars(formula))) {
-		if (length(p$args)) {
-			p$args <- p$args[names(p$args) %in% names(formals(ordinal::clm))]
-			p$args$control <- clm.control
-		}
-		p$control.name <- p$control.names$clm
-		patch.lm(p,ordinal::clm,c(list(formula=formula,data=p$data),p$args))
-	} else {
-		if (length(p$args)) {
-			p$args <- p$args[names(p$args) %in% names(formals(ordinal::clmm))]
-			p$args$control <- clmm.control
-		}
-		p$control.name <- p$control.names$clmm
-		patch.lm(p,ordinal::clmm,c(list(formula=formula,data=p$data),p$args))
-	}
+fit.clmm <- function(p,formula) {
+	fun <- if (is.null(reformulas::findbars(formula))) ordinal::clm else ordinal::clmm
+	patch.lm(p,fun,c(list(formula=formula,data=p$data),p$args))
 }
 
-fit.gam <- function (p,formula) {
+fit.gam <- function(p,formula) {
 	re <- re2mgcv(formula,p$data)
 	formula <- re$formula
 	p$data <- re$data
@@ -148,7 +132,7 @@ fit.gam <- function (p,formula) {
 	patch.lm(p,mgcv::gam,c(list(formula=formula,family=p$family,data=p$data,method=method),p$args))
 }
 
-fit.gamm <- function (p,formula) {
+fit.gamm <- function(p,formula) {
 	fixed <- reformulas::nobars(formula)
 	bars <- reformulas::findbars(formula)
 	if (is.null(bars)) {
@@ -159,8 +143,8 @@ fit.gamm <- function (p,formula) {
 		}
 		random <- NULL
 	} else {
-		random <- lapply(bars,function (x) mkForm(as.character(x[2])))
-		names(random) <- sapply(bars,function (x) as.character(x[[3]]))
+		random <- lapply(bars,function(x) mkForm(as.character(x[2])))
+		names(random) <- sapply(bars,function(x) as.character(x[[3]]))
 	}
 	method <- if (p$reml) 'REML' else 'ML'
 	progress(p,'Fitting via gamm, with ',method,': ',fixed,', random=',random)
@@ -168,23 +152,23 @@ fit.gamm <- function (p,formula) {
 	if (inherits(m,'try-error') || p$finalize) m else m$lme
 }
 
-fit.gamm4 <- function (p,formula) {
+fit.gamm4 <- function(p,formula) {
 	reml <- p$reml && p$is.gaussian
 	fixed <- reformulas::nobars(formula)
 	bars <- reformulas::findbars(formula)
-	random <- if (length(bars)) mkForm(paste('(',sapply(bars,function (x) as.character(list(x))),')',collapse=' + ')) else NULL
+	random <- if (length(bars)) mkForm(paste('(',sapply(bars,function(x) as.character(list(x))),')',collapse=' + ')) else NULL
 	if (is.null(random) && !has.smooth.terms(formula)) return(fit.buildmer(p,formula))
 	progress(p,'Fitting via gamm4, with ',ifelse(reml,'REML','ML'),': ',fixed,', random=',random)
 	model <- patch.gamm4(p,gamm4::gamm4,c(list(formula=fixed,random=random,family=p$family,data=p$data,REML=reml),p$args))
 	if (inherits(model,'try-error') || p$finalize) model else model$mer
 }
 
-fit.glmmTMB <- function (p,formula) {
+fit.glmmTMB <- function(p,formula) {
 	if (p$reml && is.null(reformulas::findbars(formula))) {
 		# work around bug in glmmTMB: REML only works if at least one non-f.e. parameter is specified
 		family <- p$family
 		if (is.character(family)) family <- get(family)
-		if (is.function (family)) family <- family()
+		if (is.function(family)) family <- family()
 		if (family$family %in% c('poisson','binomial')) {
 			p$args$control <- NULL
 			p$quickstart <- 0
@@ -195,7 +179,7 @@ fit.glmmTMB <- function (p,formula) {
 		# glmmTMB issue #612
 		buildmer_offset <- p$args$offset
 		p$args$offset <- NULL
-		fun <- function (...) glmmTMB::glmmTMB(...,offset=buildmer_offset)
+		fun <- function(...) glmmTMB::glmmTMB(...,offset=buildmer_offset)
 	} else {
 		fun <- glmmTMB::glmmTMB
 	}
@@ -203,7 +187,7 @@ fit.glmmTMB <- function (p,formula) {
 	patch.lm(p,fun,c(list(formula=formula,data=p$data,family=p$family,REML=p$reml),p$args))
 }
 
-fit.gls <- function (p,formula) {
+fit.gls <- function(p,formula) {
 	method <- if (p$reml) 'REML' else 'ML'
 	progress(p,'Fitting via gls, with ',method,': ',formula)
 	# gls cannot handle rank-deficient fixed effects --- work around the problem
@@ -222,7 +206,7 @@ fit.gls <- function (p,formula) {
 	patch.lm(p,nlme::gls,c(list(formula,data=p$data,method=method),p$args))
 }
 
-fit.lme <- function (p,formula) {
+fit.lme <- function(p,formula) {
 	fixed <- reformulas::nobars(formula)
 	bars <- reformulas::findbars(formula)
 	if ((length(bars) + !is.null(p$args$random)) > 1) stop(paste0('lme can only handle a single random-effect grouping factor, yet you seem to have specified ',length(bars)))
@@ -245,7 +229,7 @@ fit.lme <- function (p,formula) {
 	patch.lm(p,nlme::lme,c(list(fixed,data=p$data,random=random,method=method),p$args))
 }
 
-fit.mertree <- function (p,formula) {
+fit.mertree <- function(p,formula) {
 	fixed <- reformulas::nobars(formula)
 	bars <- reformulas::findbars(formula)
 	if (is.null(bars)) {
@@ -261,7 +245,7 @@ fit.mertree <- function (p,formula) {
 			patch.lm(p,partykit::glmtree,c(list(formula=f,data=p$data,family=p$family),p$args))
 		}
 	} else {
-		random <- paste0('(',sapply(bars,function (x) as.character(list(x))),')',collapse=' + ')
+		random <- paste0('(',sapply(bars,function(x) as.character(list(x))),')',collapse=' + ')
 		ftext <- paste0(as.character(list(fixed)),' | ',random,' | ',p$partitioning,collapse=' + ')
 		f <- stats::as.formula(ftext)
 		if (p$is.gaussian) {
@@ -274,12 +258,12 @@ fit.mertree <- function (p,formula) {
 	}
 }
 
-fit.multinom <- function (p,formula) {
+fit.multinom <- function(p,formula) {
 	progress(p,'Fitting via multinom: ',formula)
 	patch.lm(p,nnet::multinom,c(list(formula=formula,data=p$data),p$args))
 }
 
-fit.nb <- function (p,formula) {
+fit.nb <- function(p,formula) {
 	# We can't rely on matching formals between glm.nb and glmer.nb, because glmer.nb accepts dots arguments
 	in.glm   <- names(p$args %in% names(formals(MASS::glm.nb)))
 	in.glmer <- names(p$args %in% names(formals(lme4::glmer.nb)))

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utility.r
 \name{LRTalpha}
 \alias{LRTalpha}
-\title{Generate an LRT elimination function with custom alpha level}
+\title{Generates an LRT elimination function with custom alpha level}
 \usage{
 LRTalpha(alpha)
 }
@@ -10,7 +10,7 @@ LRTalpha(alpha)
 \item{alpha}{The alpha level for the likelihood-ratio test.}
 }
 \description{
-The \code{elim} argument in \code{buildmerControl} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
+The \code{elim} argument in \code{\link{buildmerControl}} can take any user-specified elimination function. \code{LRTalpha} generates such a function that uses the likelihood-ratio test, based on a user-specified alpha level. (For the default alpha of .05, one can also simply specify the string \code{'LRT'} or the function \code{buildmer:::elim.LRT}).
 }
 \seealso{
 \code{\link{buildmerControl}}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildbam}
 \alias{buildbam}
-\title{Use \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}}
+\title{Uses \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}}
 \usage{
 buildbam(
   formula,
@@ -12,23 +12,23 @@ buildbam(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}
+Uses \code{buildmer} to fit big generalized additive models using \code{bam} from package \code{mgcv}
 }
 \details{
 To work around an issue in \code{bam}, you must make sure that your data do not contain a variable named 'intercept'.
 
 \code{lme4} random effects are supported: they will be automatically converted using \code{\link{re2mgcv}}.
 
-As \code{bam} uses PQL, only \code{crit='F'} and \code{crit='deviance'} (note that the latter is not a formal test) are supported for non-Gaussian errors.
+In the generalized case, \code{bam} only returns the correct ML/REML values as of mgcv 1.9-4.
 }
 \examples{
 \dontshow{
@@ -42,5 +42,5 @@ model <- buildbam(f1 ~ s(timepoint,by=following) + s(participant,by=following,bs
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/buildmer.r
 \name{buildglmmTMB}
 \alias{buildglmmTMB}
-\title{Use \code{buildmer} to perform stepwise elimination on \code{glmmTMB} models}
+\title{Uses \code{buildmer} to perform stepwise elimination on \code{glmmTMB} models}
 \usage{
 buildglmmTMB(
   formula,
@@ -12,16 +12,16 @@ buildglmmTMB(
 )
 }
 \arguments{
-\item{formula}{See the general documentation under \code{\link{buildmer-package}}}
+\item{formula}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{data}{See the general documentation under \code{\link{buildmer-package}}}
+\item{data}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{family}{See the general documentation under \code{\link{buildmer-package}}}
+\item{family}{See the general documentation under \code{\link{buildmer-package}}.}
 
-\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}}
+\item{buildmerControl}{Control arguments for buildmer --- see the general documentation under \code{\link{buildmerControl}}.}
 }
 \description{
-Use \code{buildmer} to perform stepwise elimination on \code{glmmTMB} models
+Uses \code{buildmer} to perform stepwise elimination on \code{glmmTMB} models
 }
 \examples{
 library(buildmer)
@@ -30,5 +30,5 @@ if (requireNamespace('glmmTMB')) {
 }
 }
 \seealso{
-\code{\link{buildmer-package}}
+\code{\link{buildmerControl}}
 }

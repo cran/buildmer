@@ -28,6 +28,3 @@ library(buildmer)
 bm <- mkBuildmer(model=model,p=p,anova=NULL,summary=NULL)
 summary(bm)
 }
-\seealso{
-\code{\link{buildmer}}
-}
